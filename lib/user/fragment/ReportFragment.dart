@@ -210,13 +210,13 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
   }
 
   void _saveRecordingToBackend(String audioFilePath) async {
-    final url = Uri.parse(mBaseUrl + 'driverMessageMedia');
+    final url = Uri.parse(mBaseUrl + 'driverMessageRecording');
     final request = http.MultipartRequest('POST', url);
 
     // Attach the audio file
     if (audioFilePath != null) {
       request.files.add(
-        await http.MultipartFile.fromPath('media', audioFilePath),
+        await http.MultipartFile.fromPath('audio', audioFilePath),
       );
     }
 

@@ -62,9 +62,9 @@ class TrackerDashboardState extends State<TrackerDashboard> {
   String getTitle() {
     String title = language.myOrders;
     if (currentIndex == 0) {
-      title = language.order;
+      title = "Map";
     } else if (currentIndex == 1) {
-      title = language.account;
+      title = "Report";
     }
     else if (currentIndex == 2) {
       title = language.profile;
