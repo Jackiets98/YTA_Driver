@@ -1,0 +1,119 @@
+name: yes_tracker
+description: A new Flutter project.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+12
+
+environment:
+  sdk: ">=2.15.1 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # CONNECTIVITY
+  url_launcher: ^6.1.11
+  package_info_plus: ^4.0.2
+  intl: ^0.18.1
+  html: ^0.15.4
+  http: ^1.0.0
+  connectivity_plus: ^4.0.1
+
+  # STATE MANAGEMENT
+  mobx: ^2.2.0
+  flutter_mobx: ^2.0.6+5
+
+  # Base
+  nb_utils: ^5.0.8
+  google_fonts: ^5.1.0
+  animated_bottom_navigation_bar: ^1.2.0
+
+  # TOOLS
+  cupertino_icons: ^1.0.5
+  lottie: ^2.4.0
+  timeline_tile: ^2.0.0
+  country_code_picker: ^3.0.0
+  flutter_spinkit: ^5.2.0
+  bcrypt: ^1.1.3
+  device_info_plus: ^9.0.3
+  fluttertoast: ^8.0.8
+  firebase_messaging: ^14.7.3
+  social_media_recorder: ^1.1.12
+  audioplayers: ^5.2.1
+
+  # Dotted Line
+  dotted_line: ^3.2.2
+
+
+  # IMAGES
+  image_picker: ^0.8.9
+  file_picker: ^5.3.2
+  cached_network_image: ^3.2.3
+  syncfusion_flutter_signaturepad: ^22.1.34
+  screenshot: ^2.1.0
+  date_time_picker: ^2.1.0
+  video_player: ^2.3.8
+
+  # MAP
+  location: ^4.4.0
+  geolocator: ^10.0.1
+  geocoding: ^2.0.1
+  google_maps_flutter: ^2.5.0
+#  flutter_polyline_points: ^1.0.0
+#  maps_launcher: ^2.2.0
+#  google_maps_place_picker_mb: ^3.1.1
+
+  # PUSH NOTIFICATION
+#  onesignal_flutter: ^3.5.1
+
+  #OTP TEXTFIELD
+  otp_text_field: ^1.1.3
+
+
+  # DOWNLOAD INVOICE PDF
+  pdf: ^3.10.4
+  path_provider: ^2.0.15
+#  open_file: ^3.3.2
+  printing: ^5.11.0
+
+  # READ MORE LESS
+  readmore: ^2.2.0
+
+  flutter_localizations:
+    sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+  firebase_core: ^2.21.0
+  flutter_local_notifications: ^16.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.5
+  mobx_codegen: ^2.3.0
+
+flutter_launcher_icons:
+  image_path_android: "assets/app_icon.png"
+  image_path_ios: "assets/app_icon.png"
+  android: ic_launcher # can specify file name here e.g. "ic_launcher"
+  ios: ic_launcher # can specify file name here e.g. "My-Launcher-Icon"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  remove_alpha_ios: true
+  background_color_ios: "#ffffff"
+
+dependency_overrides:
+  intl: ^0.18.0
+  http: ^0.13.5
+  connectivity_plus: ^4.0.2
+  freezed_annotation: ^2.2.0
+
+  #flutter packages pub run build_runner build --delete-conflicting-outputs
+
+flutter:
+
+  uses-material-design: true
+
+  assets:
+    - assets/
+    - assets/icons/
+    - assets/flag/

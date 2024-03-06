@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "771533699007",
+    "project_id": "yes-tracker",
+    "storage_bucket": "yes-tracker.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:771533699007:android:fdec816877fbe4652e130a",
+        "android_client_info": {
+          "package_name": "com.mighty.drivers_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFw7BuIFS8PuNNOs0-SL_B9w8Q0vcp5vM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
