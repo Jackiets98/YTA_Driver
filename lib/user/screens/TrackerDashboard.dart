@@ -66,6 +66,9 @@ class TrackerDashboardState extends State<TrackerDashboard> {
     } else if (currentIndex == 1) {
       title = language.account;
     }
+    else if (currentIndex == 2) {
+      title = language.profile;
+    }
     return title;
   }
 
@@ -105,14 +108,14 @@ class TrackerDashboardState extends State<TrackerDashboard> {
       ),
       body: BodyCornerWidget(
         child: [
-          DProfileFragment(),
           OrderFragment(),
           ReportFragment(),
+          DProfileFragment(),
         ][currentIndex],
       ),
       bottomNavigationBar: AnimatedBottomNavigationBar(
         backgroundColor: context.cardColor,
-        icons: [Icons.home, Icons.pin_drop, Icons.document_scanner_outlined],
+        icons: [Icons.pin_drop, Icons.chat, Icons.person_outline],
         activeIndex: currentIndex,
         gapLocation: GapLocation.none,
         notchSmoothness: NotchSmoothness.defaultEdge,

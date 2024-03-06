@@ -180,7 +180,6 @@ class DProfileFragmentState extends State<DProfileFragment> {
         ),
       ),
     ):Scaffold(
-      appBar: AppBar(title: Text(language.profile)),
       body: Observer(
         builder: (_) => BodyCornerWidget(
           child: SingleChildScrollView(
