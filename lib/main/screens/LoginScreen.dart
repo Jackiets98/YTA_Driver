@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:yes_tracker/user/screens/TrackerDashboard.dart';
 import '../../main/screens/ForgotPasswordScreen.dart';
 import '../../main/utils/Colors.dart';
 import '../../main/utils/Common.dart';
@@ -90,7 +91,7 @@ class LoginScreenState extends State<LoginScreen> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => DeliveryDashBoard()),
+          MaterialPageRoute(builder: (context) => TrackerDashboard()),
         );
       } else if(body['success'] == 'disabled') {
         // Handle registration error

@@ -1,6 +1,7 @@
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:yes_tracker/delivery/fragment/DProfileFragment.dart';
 import '../../user/screens/WalletScreen.dart';
 import '../../main.dart';
 import '../../main/components/BodyCornerWidget.dart';
@@ -104,14 +105,14 @@ class TrackerDashboardState extends State<TrackerDashboard> {
       ),
       body: BodyCornerWidget(
         child: [
-          AccountFragment(),
+          DProfileFragment(),
           OrderFragment(),
           ReportFragment(),
         ][currentIndex],
       ),
       bottomNavigationBar: AnimatedBottomNavigationBar(
         backgroundColor: context.cardColor,
-        icons: [Icons.home, Icons.pin_drop, Icons.document_scanner_outlined, Icons.fire_truck_sharp],
+        icons: [Icons.home, Icons.pin_drop, Icons.document_scanner_outlined],
         activeIndex: currentIndex,
         gapLocation: GapLocation.none,
         notchSmoothness: NotchSmoothness.defaultEdge,
