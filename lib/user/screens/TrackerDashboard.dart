@@ -14,7 +14,7 @@ import '../../main/utils/Colors.dart';
 import '../../main/utils/Constants.dart';
 import '../../user/components/FilterOrderComponent.dart';
 import '../../user/fragment/AccountFragment.dart';
-import '../../user/fragment/OrderFragment.dart';
+import '../../user/fragment/MapFragment.dart';
 
 import 'package:nb_utils/nb_utils.dart';
 
@@ -108,7 +108,7 @@ class TrackerDashboardState extends State<TrackerDashboard> {
       ),
       body: BodyCornerWidget(
         child: [
-          OrderFragment(),
+          MapFragment(),
           ReportFragment(),
           DProfileFragment(),
         ][currentIndex],

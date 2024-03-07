@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:social_media_recorder/audio_encoder_type.dart';
+import 'package:yes_tracker/main/components/VoiceMessagePlayer.dart';
 import '../../main/utils/Constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -550,10 +551,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                       children: [
                         Expanded(
                           child: Center(
-                            child: Text(
-                              'Driver Report',
-                              style: TextStyle(fontSize: 24),
-                            ),
+                            child: VoiceMessagePlayer(audioUri: 'https://staging.yessirgps.com/public/audio/y2eBE2feXlJ3bFCX2bUFzwnigRkLp3kPXhwiiMBJ.aac',),
                           ),
                         ),
                         Divider(
