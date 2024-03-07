@@ -32,6 +32,7 @@ class ReportFragment extends StatefulWidget {
 class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObserver {
   bool _isDriverSelected = true;
   List<dynamic> _adminReports = [];
+  List<dynamic> driverReports = [];
   int _currentPage = 1; // Keep track of the current page number
   bool _isLoading = false; // Flag to indicate if data is being loaded
   TextEditingController _messageController = TextEditingController();
@@ -132,6 +133,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     super.initState();
     WidgetsBinding.instance?.addObserver(this);
     fetchAdminReports();
+    fetchDriverReports();
     getID().then((_) {
       // Once the data is retrieved, you can use it here
       print('User ID: $userID');
@@ -144,9 +146,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
   @override
   void dispose() {
     WidgetsBinding.instance?.removeObserver(this);
-    _player.closePlayer();
-    _recorder.closeRecorder();
-    _stopTimer();
     super.dispose();
   }
 
@@ -459,6 +458,25 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     androidID = sharedPreferences.getString('androidID');
   }
 
+  Future<void> fetchDriverReports() async {
+    try {
+      final response = await http.get(Uri.parse(mBaseUrl + 'getDriverReports')); // Replace 'your_backend_url_here' with your actual backend URL
+
+      if (response.statusCode == 200) {
+        // If the request is successful (status code 200), parse the response body
+        setState(() {
+          driverReports = json.decode(response.body);
+        });
+      } else {
+        // If the request fails, print an error message
+        print('Failed to load driver reports: ${response.statusCode}');
+      }
+    } catch (e) {
+      // If an exception occurs, print the error
+      print('Exception occurred: $e');
+    }
+  }
+
   Future<void> fetchAdminReports({int page = 1}) async {
     if (_isLoading) return; // If already loading, do not fetch again
     setState(() {
@@ -546,19 +564,75 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: Center(
-                            child: VoiceMessagePlayer(audioUri: 'https://staging.yessirgps.com/public/audio/y2eBE2feXlJ3bFCX2bUFzwnigRkLp3kPXhwiiMBJ.aac',),
+                    child: ListView.builder(
+                      reverse: true, // Reverse the list view
+                      itemCount: driverReports.length,
+                      itemBuilder: (context, index) {
+                        final reversedIndex = driverReports.length - 1 - index; // Calculate the reversed index
+                        final driverImage = driverReports[reversedIndex]['driver_image']; // Get the driver image URL
+                        final media = driverReports[reversedIndex]['media']; // Get the driver report image URL
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (driverImage != null) // Conditionally show CircleAvatar if driver_image is available
+                                      CircleAvatar(
+                                        backgroundImage: NetworkImage('$DOMAIN_URL/public/drivers/$driverImage'),
+                                      )
+                                    else // Otherwise, show default image
+                                      CircleAvatar(
+                                        backgroundImage: NetworkImage('https://t4.ftcdn.net/jpg/02/27/45/09/360_F_227450952_KQCMShHPOPebUXklULsKsROk5AvN6H1H.jpg'),
+                                      ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${driverReports[reversedIndex]['driver_surname']}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Text(
+                                            '${driverReports[reversedIndex]['created_at']}',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 16),
+                                if (media != null) ...[
+                                  if (media.endsWith('.jpg'))
+                                    Container(
+                                      height: 100,
+                                      width: 100,
+                                      child: Image.network('$DOMAIN_URL/public/media/$media'),
+                                    ),
+                                  if (media.endsWith('.aac'))
+                                    SizedBox(
+                                      height: 50, // Provide a height constraint
+                                      width: 200, // Provide a width constraint
+                                      child: VoiceMessagePlayer(
+                                        audioUri: '$DOMAIN_URL/public/audio/$media',
+                                      ),
+                                    ),
+                                ],
+                                SizedBox(height: 8),
+                                Text(
+                                  '${driverReports[reversedIndex]['message'] ?? ''}',
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Divider(
-                          color: Colors.purple, // Specify the color of the divider
-                          thickness: 1.0, // Specify the thickness of the divider
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
                   _isRecording
@@ -573,7 +647,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                               ElevatedButton(
                                 child: Icon(
                                   _recorder.isRecording ? Icons.stop : Icons.mic,
-                                  size: 80,
+                                  size: 60,
                                 ),
                                 onPressed: () async{
                                   if (_recorder.isRecording) {
@@ -587,28 +661,28 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                   });
                                 },
                               ),
-                              SizedBox(height: 50,),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  if (isPlaying) {
-                                    await stopPlayback(); // Pause the audio playback
-                                  } else {
-                                    if (_player.isPaused) {
-                                      await _player.resumePlayer(); // Resume the playback
-                                    } else {
-                                      await play(); // Start playing the audio
-                                    }
-                                  }
-                                  setState(() {
-                                    // Toggle the isPlaying state
-                                    isPlaying = !isPlaying;
-                                  });
-                                },
-                                child: Icon(
-                                  isPlaying ? Icons.stop : Icons.play_arrow,
-                                  size: 80,
-                                ),
-                              ),
+                              // SizedBox(height: 50,),
+                              // ElevatedButton(
+                              //   onPressed: () async {
+                              //     if (isPlaying) {
+                              //       await stopPlayback(); // Pause the audio playback
+                              //     } else {
+                              //       if (_player.isPaused) {
+                              //         await _player.resumePlayer(); // Resume the playback
+                              //       } else {
+                              //         await play(); // Start playing the audio
+                              //       }
+                              //     }
+                              //     setState(() {
+                              //       // Toggle the isPlaying state
+                              //       isPlaying = !isPlaying;
+                              //     });
+                              //   },
+                              //   child: Icon(
+                              //     isPlaying ? Icons.stop : Icons.play_arrow,
+                              //     size: 80,
+                              //   ),
+                              // ),
                             ],
                           )
                       ),
@@ -653,9 +727,13 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                         SizedBox(width: 16.0),
                         IconButton(
                           onPressed: () {
-                            setState(() {
-                              _isRecording = true;
-                            });
+                            if (_isTyping) {
+                              _sendMessage(); // Send message if user is typing
+                            } else {
+                              setState(() {
+                                _isRecording = true; // Start recording if user is not typing
+                              });
+                            }
                           },
                           icon: _isTyping ? Icon(Icons.send) : Icon(Icons.mic),
                         ),
@@ -822,5 +900,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       ),
     );
   }
+
 
 }
