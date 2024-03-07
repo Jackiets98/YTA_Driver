@@ -444,14 +444,55 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                    child: Center(
-                      child: Text(
-                        'Driver Report',
-                        style: TextStyle(fontSize: 24),
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              'Driver Report',
+                              style: TextStyle(fontSize: 24),
+                            ),
+                          ),
+                        ),
+                        Divider(
+                          color: Colors.purple, // Specify the color of the divider
+                          thickness: 1.0, // Specify the thickness of the divider
+                        ),
+                      ],
                     ),
                   ),
-                  Container(
+                  _isRecording
+                      ? Column(
+                    children: [
+                      SocialMediaRecorder(
+                        startRecording: () {
+                          // setState(() {
+                          //   _isRecording = true;
+                          // });
+                        },
+                        stopRecording: (_time) {
+                          // setState(() {
+                          //   _isRecording = false;
+                          // });
+                        },
+                        sendRequestFunction: (soundFile, _time) {
+                          _saveRecordingToBackend(soundFile.path);
+                        },
+                        encode: AudioEncoderType.AAC,
+                      ),
+                      SizedBox(height: 16.0),
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _isRecording = false;
+                          });
+                        },
+                        icon: Icon(Icons.close),
+                      ),
+                    ],
+                  )
+                      : Container(
                     color: Colors.white,
                     padding: EdgeInsets.all(16.0),
                     child: Row(
@@ -480,26 +521,14 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                         ),
                         SizedBox(width: 16.0),
                         IconButton(
-                          onPressed: _isTyping ? _sendMessage : null,
-                          icon: _isTyping ? Icon(Icons.send) :
-                          // Replace the IconButton with SocialMediaRecorder widget
-                          SocialMediaRecorder(
-                            startRecording: () {
-                              // Function called when start recording
-                            },
-                            stopRecording: (_time) {
-                              // Function called when stop recording, return the recording time
-                            },
-                            sendRequestFunction: (soundFile, _time) {
-                              // Function called when recording is finished, you can handle the recorded audio here
-                              // The 'soundFile' parameter contains the recorded audio file
-                              // You can use this file for sending the voice message
-                              // Example: _sendMessageWithMedia(soundFile);
-                              _saveRecordingToBackend(soundFile.path);
-                            },
-                            encode: AudioEncoderType.AAC, // Specify the audio encoder type
-                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isRecording = true;
+                            });
+                          },
+                          icon: _isTyping ? Icon(Icons.send) : Icon(Icons.mic),
                         ),
+
                       ],
                     ),
                   ),
@@ -662,4 +691,5 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       ),
     );
   }
+
 }
