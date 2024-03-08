@@ -186,7 +186,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
           // Reset the typing state
           _handleMessageInputChange(''); // Reset _isTyping to false
           // Refresh the admin reports
-          _refreshReports();
+          await fetchDriverReports(); // Reload driver reports
         } else {
           // Error saving message
           print('Error saving message: ${response.body}');
@@ -199,38 +199,40 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
 
   void _sendMessageWithMedia(XFile imageFile) async {
     final String message = _messageController.text;
-      final url = Uri.parse(mBaseUrl + 'driverMessageMedia');
-      final request = http.MultipartRequest('POST', url);
+    final url = Uri.parse(mBaseUrl + 'driverMessageMedia');
+    final request = http.MultipartRequest('POST', url);
 
-      // Attach the image file
-      if (imageFile != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('media', imageFile.path),
-        );
+    // Attach the image file
+    if (imageFile != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('media', imageFile.path),
+      );
+    }
+
+    // Add other form data
+    request.fields['message'] = message ?? '';
+    request.fields['userId'] = userID ?? '';
+
+    try {
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        // Successfully uploaded
+        print('Media uploaded successfully');
+        // Clear the message input field
+        _messageController.clear();
+        // Fetch driver reports after successful upload
+        await fetchDriverReports();
+        // Navigate back
+        Navigator.pop(context);
+      } else {
+        // Handle the error
+        print('Failed with status code: ${response.statusCode}');
       }
-
-      // Add other form data
-      request.fields['message'] = message ?? '';
-      request.fields['userId'] = userID ?? '';
-
-      try {
-        final response = await request.send();
-
-        if (response.statusCode == 200) {
-          // Successfully uploaded
-          print('Media uploaded successfully');
-          // Clear the message input field
-          _messageController.clear();
-          // Navigate back
-          Navigator.pop(context);
-        } else {
-          // Handle the error
-          print('Failed with status code: ${response.statusCode}');
-        }
-      } catch (e) {
-        print('Error: $e');
-        // Handle exceptions
-      }
+    } catch (e) {
+      print('Error: $e');
+      // Handle exceptions
+    }
   }
 
 
@@ -328,6 +330,8 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       if (response.statusCode == 200) {
         // Successfully uploaded
         print('Recording uploaded successfully');
+        // Fetch driver reports after successful upload
+        await fetchDriverReports();
         // Clear the message input field
         // _messageController.clear();
         // // Navigate back
@@ -343,6 +347,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       // Handle exceptions
     }
   }
+
 
 
   void _showImageDialog(BuildContext context, List<String> images, String imageUrl) {
