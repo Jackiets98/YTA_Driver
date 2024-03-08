@@ -34,6 +34,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
   List<dynamic> _adminReports = [];
   List<dynamic> driverReports = [];
   int _currentPage = 1; // Keep track of the current page number
+  int _driverCUrrentPage = 1;
   bool _isLoading = false; // Flag to indicate if data is being loaded
   TextEditingController _messageController = TextEditingController();
   bool _isTyping = false; // Flag to indicate if the user is typing
@@ -45,6 +46,10 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
   final _player = FlutterSoundPlayer();
   Timer? _timer;
   int _elapsedSeconds = 0;
+  // Define a debounce Duration (adjust the duration as needed)
+  Duration _debounceDuration = Duration(milliseconds: 300);
+  // Define a Timer variable to control debounce
+  Timer? _debounceTimer;
 
   void _startTimer() {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -141,6 +146,10 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       print('Android ID: $androidID');
     });
     initRecorder();
+
+    setState(() {
+      _currentPage = 0;
+    });
   }
 
   @override
@@ -233,8 +242,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       }
   }
 
-
-
   void _selectImageFromGallery() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -270,9 +277,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       );
     }
   }
-
-
-
 
   void _showAttachmentOptions() {
     showModalBottomSheet(
@@ -343,7 +347,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       // Handle exceptions
     }
   }
-
 
   void _showImageDialog(BuildContext context, List<String> images, String imageUrl) {
     int initialPageIndex = images.indexOf(imageUrl);
@@ -450,7 +453,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     }
   }
 
-
   Future getID() async {
     final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     userID = sharedPreferences.getString('id');
@@ -458,15 +460,35 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     androidID = sharedPreferences.getString('androidID');
   }
 
-  Future<void> fetchDriverReports() async {
+  Future<void> fetchDriverReports({int page = 1}) async {
     try {
-      final response = await http.get(Uri.parse(mBaseUrl + 'getDriverReports')); // Replace 'your_backend_url_here' with your actual backend URL
+      final response = await http.get(Uri.parse(mBaseUrl + 'getDriverReports?page=$page')); // Replace 'your_backend_url_here' with your actual backend URL
 
       if (response.statusCode == 200) {
         // If the request is successful (status code 200), parse the response body
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        final List<dynamic> _driverReports = responseData['driverReports']['data'];
+
         setState(() {
-          driverReports = json.decode(response.body);
+          if (page == 1) {
+            // If it's the first page, replace the current list with new data
+            driverReports = _driverReports;
+          } else {
+            // If it's not the first page, append the new data to the existing list
+            driverReports.addAll(_driverReports);
+          }
+
+          // Sort the entire list based on the created_at field
+          driverReports.sort((a, b) {
+            // Parse the created_at strings into DateTime objects
+            DateTime createdAtA = DateTime.parse(a['created_at']);
+            DateTime createdAtB = DateTime.parse(b['created_at']);
+
+            // Compare the DateTime objects
+            return createdAtA.compareTo(createdAtB); // Sorting in ascending order, oldest first
+          });
         });
+
       } else {
         // If the request fails, print an error message
         print('Failed to load driver reports: ${response.statusCode}');
@@ -476,6 +498,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       print('Exception occurred: $e');
     }
   }
+
 
   Future<void> fetchAdminReports({int page = 1}) async {
     if (_isLoading) return; // If already loading, do not fetch again
@@ -506,10 +529,31 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     }
   }
 
+// Method to handle debounced loading of more reports
+  void handleLoadMoreDriverReports() {
+    if (_debounceTimer != null && _debounceTimer!.isActive) {
+      // If a previous debounce timer is running, cancel it
+      _debounceTimer!.cancel();
+    }
+
+    // Start a new debounce timer
+    _debounceTimer = Timer(_debounceDuration, () {
+      _currentPage++; // Increment the page number
+      loadMoreDriverReports(); // Load more reports
+      print(_currentPage);
+    });
+  }
   // Method to load more reports when the user scrolls to the end
   Future<void> loadMoreReports() async {
     _currentPage++; // Increment the page number
     await fetchAdminReports(page: _currentPage);
+    print(_currentPage);
+  }
+
+  // Method to load more reports when the user scrolls to the end
+  Future<void> loadMoreDriverReports() async {
+    _currentPage++; // Increment the page number
+    await fetchDriverReports(page: _currentPage);
     print(_currentPage);
   }
 
@@ -564,75 +608,85 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                    child: ListView.builder(
-                      reverse: true, // Reverse the list view
-                      itemCount: driverReports.length,
-                      itemBuilder: (context, index) {
-                        final reversedIndex = driverReports.length - 1 - index; // Calculate the reversed index
-                        final driverImage = driverReports[reversedIndex]['driver_image']; // Get the driver image URL
-                        final media = driverReports[reversedIndex]['media']; // Get the driver report image URL
-                        return Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (driverImage != null) // Conditionally show CircleAvatar if driver_image is available
-                                      CircleAvatar(
-                                        backgroundImage: NetworkImage('$DOMAIN_URL/public/drivers/$driverImage'),
-                                      )
-                                    else // Otherwise, show default image
-                                      CircleAvatar(
-                                        backgroundImage: NetworkImage('https://t4.ftcdn.net/jpg/02/27/45/09/360_F_227450952_KQCMShHPOPebUXklULsKsROk5AvN6H1H.jpg'),
-                                      ),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '${driverReports[reversedIndex]['driver_surname']}',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          Text(
-                                            '${driverReports[reversedIndex]['created_at']}',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 16),
-                                if (media != null) ...[
-                                  if (media.endsWith('.jpg'))
-                                    Container(
-                                      height: 100,
-                                      width: 100,
-                                      child: Image.network('$DOMAIN_URL/public/media/$media'),
-                                    ),
-                                  if (media.endsWith('.aac'))
-                                    SizedBox(
-                                      height: 50, // Provide a height constraint
-                                      width: 200, // Provide a width constraint
-                                      child: VoiceMessagePlayer(
-                                        audioUri: '$DOMAIN_URL/public/audio/$media',
-                                      ),
-                                    ),
-                                ],
-                                SizedBox(height: 8),
-                                Text(
-                                  '${driverReports[reversedIndex]['message'] ?? ''}',
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (ScrollNotification scrollInfo) {
+                        if (!_isLoading && scrollInfo.metrics.atEdge && scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
+                          // If not already loading and user has scrolled to the bottom
+                          handleLoadMoreDriverReports(); // Load more reports
+                          return true;
+                        }
+                        return false;
                       },
+                      child: ListView.builder(
+                        reverse: true, // Reverse the list view
+                        itemCount: driverReports.length,
+                        itemBuilder: (context, index) {
+                          final reversedIndex = driverReports.length - 1 - index; // Calculate the reversed index
+                          final driverImage = driverReports[reversedIndex]['driver_image']; // Get the driver image URL
+                          final media = driverReports[reversedIndex]['media']; // Get the driver report image URL
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (driverImage != null) // Conditionally show CircleAvatar if driver_image is available
+                                        CircleAvatar(
+                                          backgroundImage: NetworkImage('$DOMAIN_URL/public/drivers/$driverImage'),
+                                        )
+                                      else // Otherwise, show default image
+                                        CircleAvatar(
+                                          backgroundImage: NetworkImage('https://t4.ftcdn.net/jpg/02/27/45/09/360_F_227450952_KQCMShHPOPebUXklULsKsROk5AvN6H1H.jpg'),
+                                        ),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${driverReports[reversedIndex]['driver_surname']}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${driverReports[reversedIndex]['created_at']}',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 16),
+                                  if (media != null) ...[
+                                    if (media.endsWith('.jpg'))
+                                      Container(
+                                        height: 100,
+                                        width: 100,
+                                        child: Image.network('$DOMAIN_URL/public/media/$media'),
+                                      ),
+                                    if (media.endsWith('.aac'))
+                                      SizedBox(
+                                        height: 50, // Provide a height constraint
+                                        width: 200, // Provide a width constraint
+                                        child: VoiceMessagePlayer(
+                                          audioUri: '$DOMAIN_URL/public/audio/$media',
+                                        ),
+                                      ),
+                                  ],
+                                  SizedBox(height: 8),
+                                  Text(
+                                    '${driverReports[reversedIndex]['message'] ?? ''}',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                   _isRecording
@@ -661,28 +715,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                   });
                                 },
                               ),
-                              // SizedBox(height: 50,),
-                              // ElevatedButton(
-                              //   onPressed: () async {
-                              //     if (isPlaying) {
-                              //       await stopPlayback(); // Pause the audio playback
-                              //     } else {
-                              //       if (_player.isPaused) {
-                              //         await _player.resumePlayer(); // Resume the playback
-                              //       } else {
-                              //         await play(); // Start playing the audio
-                              //       }
-                              //     }
-                              //     setState(() {
-                              //       // Toggle the isPlaying state
-                              //       isPlaying = !isPlaying;
-                              //     });
-                              //   },
-                              //   child: Icon(
-                              //     isPlaying ? Icons.stop : Icons.play_arrow,
-                              //     size: 80,
-                              //   ),
-                              // ),
                             ],
                           )
                       ),
