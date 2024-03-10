@@ -50,6 +50,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
   Duration _debounceDuration = Duration(milliseconds: 300);
   // Define a Timer variable to control debounce
   Timer? _debounceTimer;
+  List<XFile>? _pickedFiles;
 
   void _startTimer() {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -206,111 +207,227 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     }
   }
 
-  void _sendMessageWithMedia(XFile imageFile) async {
+  void _sendMessageWithMedia(List<XFile> imageFiles) async {
     final String message = _messageController.text;
-      final url = Uri.parse(mBaseUrl + 'driverMessageMedia');
-      final request = http.MultipartRequest('POST', url);
+    final url = Uri.parse(mBaseUrl + 'driverMessageMedia');
+    final request = http.MultipartRequest('POST', url);
 
-      // Attach the image file
-      if (imageFile != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('media', imageFile.path),
-        );
+    // Attach the image files
+    for (var imageFile in imageFiles) {
+      request.files.add(
+        await http.MultipartFile.fromPath('media[]', imageFile.path),
+      );
+    }
+
+    // Add other form data
+    request.fields['message'] = message ?? '';
+    request.fields['userId'] = userID ?? '';
+
+    try {
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        // Successfully uploaded
+        print('Media uploaded successfully');
+
+        // Parse the response JSON
+        final jsonResponse = await response.stream.bytesToString();
+        final Map<String, dynamic> responseData = json.decode(jsonResponse);
+
+        // Extract the message and uploaded images from the response
+        String message = responseData['message'];
+        List<dynamic> uploadedImages = responseData['images'];
+
+        // Display the message (optional)
+        print(message);
+        print(uploadedImages);
+
+        // Clear the message input field
+        _messageController.clear();
+        // Navigate back
+        Navigator.pop(context);
+      } else {
+        // Handle the error
+        print('Failed with status code: ${response.statusCode}');
+        String errorMessage = await response.stream.bytesToString();
+        print('Error message: $errorMessage');
       }
-
-      // Add other form data
-      request.fields['message'] = message ?? '';
-      request.fields['userId'] = userID ?? '';
-
-      try {
-        final response = await request.send();
-
-        if (response.statusCode == 200) {
-          // Successfully uploaded
-          print('Media uploaded successfully');
-          // Clear the message input field
-          _messageController.clear();
-          // Navigate back
-          Navigator.pop(context);
-        } else {
-          // Handle the error
-          print('Failed with status code: ${response.statusCode}');
-        }
-      } catch (e) {
-        print('Error: $e');
-        // Handle exceptions
-      }
+    } catch (e) {
+      print('Error: $e');
+      // Handle exceptions
+    }
   }
 
+
+
   void _selectImageFromGallery() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      // Navigate to the image preview page
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ImagePreviewPage(
-            imageFile: pickedFile,
-            messageController: _messageController,
-            sendMessage: (XFile imageFile) => _sendMessageWithMedia(imageFile),
-            // Pass imageFile to _sendMessageWithMedia
-          ),
-        ),
+    List<XFile>? pickedFiles = await ImagePicker().pickMultiImage(
+      imageQuality: 80,
+      maxWidth: 800,
+      maxHeight: 600,
+    );
+
+    if (pickedFiles != null && pickedFiles.isNotEmpty) {
+      showModalBottomSheet(
+        context: context,
+        builder: (BuildContext context) {
+          return Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 20),
+                Text(
+                  'Selected Images',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Container(
+                  height: 100,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: pickedFiles.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: Image.file(
+                          File(pickedFiles[index].path),
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: _messageController,
+                  decoration: InputDecoration(
+                    hintText: 'Type a message',
+                    border: OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.send),
+                      onPressed: () {
+                        _sendMessageWithMedia(pickedFiles!);
+                        setState(() {
+                          _pickedFiles = null;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       );
     }
   }
 
   void _takePictureOnSpot() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.camera);
+
     if (pickedFile != null) {
-      // Navigate to the image preview page
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ImagePreviewPage(
-            imageFile: pickedFile,
-            messageController: _messageController,
-            sendMessage: (XFile imageFile) => _sendMessageWithMedia(imageFile),
-            // Pass imageFile to _sendMessageWithMedia
-          ),
-        ),
+      showModalBottomSheet(
+        context: context,
+        builder: (BuildContext context) {
+          return Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 20),
+                Text(
+                  'Captured Image',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Image.file(
+                  File(pickedFile.path),
+                  width: double.infinity,
+                  height: 200,
+                  fit: BoxFit.cover,
+                ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: _messageController,
+                  decoration: InputDecoration(
+                    hintText: 'Type a message',
+                    border: OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.send),
+                      onPressed: () {
+                        _sendMessageWithMedia([pickedFile]);
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       );
     }
   }
+
 
   void _showAttachmentOptions() {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
-        return SafeArea(
-          child: Container(
-            child: Wrap(
-              children: <Widget>[
-                ListTile(
-                  leading: Icon(Icons.photo_library),
-                  title: Text('Choose Image from Gallery'),
-                  onTap: () {
-                    // Handle selecting image from gallery
-                    _selectImageFromGallery();
-                    Navigator.pop(context);
-                  },
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Attach Media',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                ListTile(
-                  leading: Icon(Icons.camera_alt),
-                  title: Text('Take Picture on the Spot'),
-                  onTap: () {
-                    // Handle taking picture on the spot
-                    _takePictureOnSpot();
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
+              ),
+              SizedBox(height: 16),
+              Wrap(
+                spacing: 20,
+                runSpacing: 20,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context); // Close the modal bottom sheet
+                      _selectImageFromGallery(); // Open gallery to select images
+                    },
+                    icon: Icon(Icons.image),
+                    label: Text('Select Images'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context); // Close the modal bottom sheet
+                      _takePictureOnSpot(); // Open camera to take a photo
+                    },
+                    icon: Icon(Icons.camera_alt),
+                    label: Text('Take Photo'),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },
     );
   }
+
+
 
   void _saveRecordingToBackend(String audioFilePath) async {
     final url = Uri.parse(mBaseUrl + 'driverMessageRecording');
@@ -488,7 +605,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
             return createdAtA.compareTo(createdAtB); // Sorting in ascending order, oldest first
           });
         });
-
+        print(_driverReports);
       } else {
         // If the request fails, print an error message
         print('Failed to load driver reports: ${response.statusCode}');
@@ -623,7 +740,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                         itemBuilder: (context, index) {
                           final reversedIndex = driverReports.length - 1 - index; // Calculate the reversed index
                           final driverImage = driverReports[reversedIndex]['driver_image']; // Get the driver image URL
-                          final media = driverReports[reversedIndex]['media']; // Get the driver report image URL
+                          final dynamic media = driverReports[reversedIndex]['media'];
                           return Card(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
@@ -662,11 +779,54 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                   ),
                                   SizedBox(height: 16),
                                   if (media != null) ...[
-                                    if (media.endsWith('.jpg'))
-                                      Container(
-                                        height: 100,
-                                        width: 100,
-                                        child: Image.network('$DOMAIN_URL/public/media/$media'),
+                                    if (!media.endsWith('.aac'))
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: GridView.count(
+                                          physics: NeverScrollableScrollPhysics(),
+                                          crossAxisCount: 3,
+                                          shrinkWrap: true,
+                                          children: (json.decode(media) as List<dynamic>).take(3).map<Widget>((imageUrl) {
+                                            return Padding(
+                                              padding: const EdgeInsets.all(2.0),
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  _showImageDialog(context, media, imageUrl);
+                                                },
+                                                child: Image.network(
+                                                  '$DOMAIN_URL/public/media/$imageUrl',
+                                                  width: 200,
+                                                  height: 200,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            );
+                                          }).toList()
+                                            ..add(
+                                              // Show +X if more than 3 images
+                                              (json.decode(media) as List<dynamic>).length > 3
+                                                  ? GestureDetector(
+                                                onTap: () {
+                                                  // Handle tapping on the + to show more images
+                                                },
+                                                child: Container(
+                                                  color: Colors.black54,
+                                                  width: 200,
+                                                  height: 200,
+                                                  child: Center(
+                                                    child: Text(
+                                                      '+${(json.decode(media) as List<dynamic>).length - 3}',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 24,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                                  : SizedBox(),
+                                            ),
+                                        ),
                                       ),
                                     if (media.endsWith('.aac'))
                                       SizedBox(
@@ -676,6 +836,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                           audioUri: '$DOMAIN_URL/public/audio/$media',
                                         ),
                                       ),
+
                                   ],
                                   SizedBox(height: 8),
                                   Text(
