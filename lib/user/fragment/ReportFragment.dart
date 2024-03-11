@@ -22,8 +22,6 @@ String? userID;
 String? userName;
 String? androidID;
 XFile? _selectedMedia; // Declare _selectedMedia variable
-bool _isRecording = false;
-
 
 class ReportFragment extends StatefulWidget {
   @override
@@ -38,7 +36,11 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
   int _driverCUrrentPage = 1;
   bool _isLoading = false; // Flag to indicate if data is being loaded
   TextEditingController _messageController = TextEditingController();
+  ScrollController _scrollController = ScrollController();
   bool _isTyping = false; // Flag to indicate if the user is typing
+  bool _isRecording = false;
+  bool _cancelRecording = false;
+  String _cancelText = "";
   double _keyboardPadding = 50.0; // Initial padding value
   bool isRecorderReady = false;
   bool isPlaying = false;
@@ -105,6 +107,25 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     print('Recorded audio: $path');
   }
 
+  void cancelRecording() async {
+    if (!isRecorderReady) return;
+
+    // Stop recording
+    await _recorder.stopRecorder();
+    _stopTimer();
+
+    // Delete the recording file
+    if (_recordFilePath != null) {
+      final audioFile = File(_recordFilePath!);
+      if (audioFile.existsSync()) {
+        await audioFile.delete();
+      }
+    }
+
+    print('Recording canceled');
+  }
+
+
   Future<void> play() async {
     print('Play function called');
     if (!await File(_recordFilePath).exists()) {
@@ -157,6 +178,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
   @override
   void dispose() {
     WidgetsBinding.instance?.removeObserver(this);
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -194,6 +216,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
           print('Message saved successfully');
           // Clear the message input field
           _messageController.clear();
+          _refreshDriverReports();
           // Reset the typing state
           _handleMessageInputChange(''); // Reset _isTyping to false
           // Refresh the admin reports
@@ -245,6 +268,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
 
         // Clear the message input field
         _messageController.clear();
+        _refreshDriverReports();
         // Navigate back
         Navigator.pop(context);
       } else {
@@ -479,6 +503,8 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       if (response.statusCode == 200) {
         // Successfully uploaded
         print('Recording uploaded successfully');
+        // Fetch driver reports after successful upload
+        _refreshDriverReports();
         // Clear the message input field
         // _messageController.clear();
         // // Navigate back
@@ -494,6 +520,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       // Handle exceptions
     }
   }
+
 
   void _showImageDialog(BuildContext context, List<String> images, String imageUrl) {
     int initialPageIndex = images.indexOf(imageUrl);
@@ -713,6 +740,20 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     await fetchAdminReports();
   }
 
+  Future<void> _refreshDriverReports() async {
+    _driverCUrrentPage = 1;
+    await fetchDriverReports();
+
+    // Scroll to the top after refreshing
+    _scrollController.animateTo(
+      0.0,
+      duration: Duration(milliseconds: 500), // Adjust duration as needed
+      curve: Curves.easeInOut, // Adjust curve as needed
+    );
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -769,6 +810,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                         return false;
                       },
                       child: ListView.builder(
+                        controller: _scrollController,
                         reverse: true, // Reverse the list view
                         itemCount: driverReports.length,
                         itemBuilder: (context, index) {
@@ -907,38 +949,102 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                     children: [
                       Center(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text('${_elapsedSeconds ~/ 60}:${(_elapsedSeconds % 60).toString().padLeft(2, '0')}'),
-                              SizedBox(height: 10,),
-                              ElevatedButton(
-                                child: Icon(
-                                  _recorder.isRecording ? Icons.stop : Icons.mic,
-                                  size: 60,
-                                ),
-                                onPressed: () async{
-                                  if (_recorder.isRecording) {
-                                    await stop();
-                                  }else {
-                                    await record();
-                                  }
+                              Center(
+                                  child: Column(
+                                    children: [
+                                      Center(
+                                        child: GestureDetector(
+                                          onLongPressStart: (_) async {
+                                            // Start recording when long press starts
+                                            await record();
+                                            setState(() {
+                                              // Set recording state to true
+                                              _isRecording = true;
+                                              _cancelText = "Swipe up to cancel"; // Set cancellation text
+                                            });
+                                          },
+                                          onLongPressEnd: (_) async {
+                                            if (!_cancelRecording) { // Only stop recording if not canceled
+                                              // Stop recording when long press ends
+                                              await stop();
+                                            }
+                                            setState(() {
+                                              // Reset recording and cancellation states
+                                              // _isRecording = false;
+                                              _cancelRecording = false;
+                                              _cancelText = ""; // Reset cancellation text
+                                            });
+                                          },
+                                          onLongPressMoveUpdate: (details) {
+                                            final RenderBox buttonBox = context.findRenderObject() as RenderBox;
+                                            final buttonSize = buttonBox.size;
 
-                                  setState(() {
+                                            // Get the position of the long press relative to the button
+                                            final pressPosition = details.localPosition;
 
-                                  });
-                                },
+                                            // Define a margin for the button to account for partial swipes
+                                            final double margin = 20.0;
+
+                                            // Check if the press position is outside the button area with margin
+                                            if (pressPosition.dx < -margin ||
+                                                pressPosition.dx > buttonSize.width + margin ||
+                                                pressPosition.dy < -margin ||
+                                                pressPosition.dy > buttonSize.height + margin) {
+                                              setState(() {
+                                                // Set cancellation flag
+                                                _cancelRecording = true;
+                                                _cancelText = ""; // Reset cancellation text
+                                              });
+                                              // Cancel recording
+                                              cancelRecording();
+                                            }
+                                          },
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              _cancelText.isNotEmpty ?
+                                              Text(
+                                                _cancelText,
+                                                style: TextStyle(color: Colors.red), // Apply red color to cancellation text
+                                              ) :
+                                              SizedBox(height: 2.0),
+                                              Text(
+                                                '${_elapsedSeconds ~/ 60}:${(_elapsedSeconds % 60).toString().padLeft(2, '0')}',
+                                                style: TextStyle(color: Colors.black), // Example styling for the timer text
+                                              ),
+                                              // SizedBox(height: 10,),
+                                              ElevatedButton(
+                                                child: Icon(
+                                                  _recorder.isRecording ? Icons.stop : Icons.mic,
+                                                  size: 80,
+                                                ),
+                                                onPressed: () {
+                                                  // This will be triggered when the button is tapped
+                                                  // We handle long press actions separately with GestureDetector
+                                                },
+                                              ),
+                                              SizedBox(height: 16.0), // Display cancel text if not empty
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(height: 16.0),
+                                      IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            // Clear the recording state when the close button is pressed
+                                            _isRecording = false;
+                                            _cancelText = ""; // Reset cancellation text
+                                          });
+                                        },
+                                        icon: Icon(Icons.close),
+                                      ),
+                                    ],
+                                  )
                               ),
                             ],
-                          )
-                      ),
-                      SizedBox(height: 16.0),
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _isRecording = false;
-                          });
-                        },
-                        icon: Icon(Icons.close),
+                          ),
                       ),
                     ],
                   )
@@ -978,6 +1084,14 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                               setState(() {
                                 _isRecording = true; // Start recording if user is not typing
                               });
+                              // Show toast message
+                              Fluttertoast.showToast(
+                                msg: "Hold and Release to Send",
+                                toastLength: Toast.LENGTH_SHORT,
+                                gravity: ToastGravity.BOTTOM,
+                                backgroundColor: Colors.black.withOpacity(0.8),
+                                textColor: Colors.white,
+                              );
                             }
                           },
                           icon: _isTyping ? Icon(Icons.send) : Icon(Icons.mic),
@@ -1049,7 +1163,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                           padding: const EdgeInsets.fromLTRB(5, 5, 0, 0),
                                           child: Text(_adminReports[index]['created_at'],style: TextStyle(fontSize: 11,color: Colors.grey),
                                         ),
-                                      ],
+                                        )],
                                     ),
                                   ),
                                 ],

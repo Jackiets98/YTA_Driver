@@ -84,7 +84,7 @@ class TrackerDashboardState extends State<TrackerDashboard> {
             padding: const EdgeInsets.all(8.0),
             child: Stack(
               children: [
-                Align(alignment: AlignmentDirectional.center, child: Icon(Icons.person_outline)),
+                // Align(alignment: AlignmentDirectional.center, child: Icon(Icons.person_outline)),
                 Observer(builder: (context) {
                   return Positioned(
                     right: 2,
