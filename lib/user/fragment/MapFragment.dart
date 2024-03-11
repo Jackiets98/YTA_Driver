@@ -60,6 +60,9 @@ class MapFragmentState extends State<MapFragment> {
   void searchVehicle(String searchText) async {
     // Clear previous markers
     markers.clear();
+    travelVehicle = 0;
+    idleVehicle = 0;
+    stopVehicle = 0;
 
     var response = await http.get(Uri.parse(mBaseUrl + 'getDeviceList'));
 
