@@ -6,6 +6,7 @@ import 'package:flutter_sound/public/flutter_sound_player.dart';
 import 'package:flutter_sound/public/flutter_sound_recorder.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:social_media_recorder/audio_encoder_type.dart';
@@ -385,38 +386,65 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       context: context,
       builder: (BuildContext context) {
         return Container(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.symmetric(vertical: 20, horizontal: 40),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Attach Media',
+                'Choose Action To Complete',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
               ),
-              SizedBox(height: 16),
-              Wrap(
-                spacing: 20,
-                runSpacing: 20,
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
+                  GestureDetector(
+                    onTap: () {
                       Navigator.pop(context); // Close the modal bottom sheet
                       _selectImageFromGallery(); // Open gallery to select images
                     },
-                    icon: Icon(Icons.image),
-                    label: Text('Select Images'),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: EdgeInsets.all(10),
+                      child: Icon(
+                        Icons.image,
+                        size: 50,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () {
+                  GestureDetector(
+                    onTap: () {
                       Navigator.pop(context); // Close the modal bottom sheet
                       _takePictureOnSpot(); // Open camera to take a photo
                     },
-                    icon: Icon(Icons.camera_alt),
-                    label: Text('Take Photo'),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: EdgeInsets.all(10),
+                      child: Icon(
+                        Icons.camera_alt,
+                        size: 50,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -426,6 +454,8 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       },
     );
   }
+
+
 
 
 
@@ -471,51 +501,56 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          insetPadding: EdgeInsets.zero,
-          child: Container(
-            color: Colors.black.withOpacity(0.8),
-            child: Center(
-              child: Stack(
-                children: [
-                  PageView.builder(
-                    itemCount: images.length,
-                    controller: PageController(initialPage: initialPageIndex),
-                    itemBuilder: (context, index) {
-                      return Center(
-                        child: Container(
-                          width: MediaQuery.of(context).size.width * 0.8,
-                          height: MediaQuery.of(context).size.width * 0.8,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Stack(
-                            children: [
-                              Image.network(
-                                images[index],
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                              Positioned(
-                                top: 10,
-                                right: 10,
-                                child: IconButton(
-                                  icon: Icon(Icons.close),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  color: Colors.white,
+        return GestureDetector(
+          onTap: () {
+            Navigator.of(context).pop();
+          },
+          child: Dialog(
+            insetPadding: EdgeInsets.zero,
+            child: Container(
+              color: Colors.black.withOpacity(0.8),
+              child: Center(
+                child: Stack(
+                  children: [
+                    PageView.builder(
+                      itemCount: images.length,
+                      controller: PageController(initialPage: initialPageIndex),
+                      itemBuilder: (context, index) {
+                        return Center(
+                          child: Container(
+                            width: MediaQuery.of(context).size.width * 0.8,
+                            height: MediaQuery.of(context).size.width * 0.8,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Stack(
+                              children: [
+                                Image.network(
+                                  images[index],
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
                                 ),
-                              ),
-                            ],
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: IconButton(
+                                    icon: Icon(Icons.close),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -655,7 +690,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
 
     // Start a new debounce timer
     _debounceTimer = Timer(_debounceDuration, () {
-      _currentPage++; // Increment the page number
       loadMoreDriverReports(); // Load more reports
       print(_currentPage);
     });
@@ -741,6 +775,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                           final reversedIndex = driverReports.length - 1 - index; // Calculate the reversed index
                           final driverImage = driverReports[reversedIndex]['driver_image']; // Get the driver image URL
                           final dynamic media = driverReports[reversedIndex]['media'];
+                          String createdAt = DateFormat('dd-MM-yyyy hh:mm:ss a').format(DateTime.parse(driverReports[index]['created_at']));
                           return Card(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
@@ -769,13 +804,19 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
+                                            SizedBox(height: 10,),
                                             Text(
-                                              '${driverReports[reversedIndex]['created_at']}',
+                                              '$createdAt',
+                                              style: TextStyle(fontSize: 11,color: Colors.grey),
                                             ),
                                           ],
                                         ),
                                       ),
                                     ],
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    '${driverReports[reversedIndex]['message'] ?? ''}',
                                   ),
                                   SizedBox(height: 16),
                                   if (media != null) ...[
@@ -786,25 +827,40 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                           physics: NeverScrollableScrollPhysics(),
                                           crossAxisCount: 3,
                                           shrinkWrap: true,
-                                          children: (json.decode(media) as List<dynamic>).take(3).map<Widget>((imageUrl) {
+                                          children: (json.decode(media) as List<dynamic>).take(2).map<Widget>((media) {
+                                            String imageUrl = driverMediaURL + media;
                                             return Padding(
                                               padding: const EdgeInsets.all(2.0),
                                               child: GestureDetector(
                                                 onTap: () {
-                                                  _showImageDialog(context, media, imageUrl);
+                                                  _showImageDialog(
+                                                    context,
+                                                    (jsonDecode(driverReports[reversedIndex]['media']) as List)
+                                                        .map<String>((media) => driverMediaURL + media)
+                                                        .toList(),
+                                                    imageUrl,
+                                                  );
                                                 },
-                                                child: Image.network(
-                                                  '$DOMAIN_URL/public/media/$imageUrl',
-                                                  width: 200,
-                                                  height: 200,
-                                                  fit: BoxFit.cover,
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                      color: Colors.black, // Border color
+                                                      width: 0.2, // Border width
+                                                    ),
+                                                  ),
+                                                  child: Image.network(
+                                                    imageUrl,
+                                                    width: 200,
+                                                    height: 200,
+                                                    fit: BoxFit.cover,
+                                                  ),
                                                 ),
                                               ),
                                             );
                                           }).toList()
                                             ..add(
                                               // Show +X if more than 3 images
-                                              (json.decode(media) as List<dynamic>).length > 3
+                                              (json.decode(media) as List<dynamic>).length > 2
                                                   ? GestureDetector(
                                                 onTap: () {
                                                   // Handle tapping on the + to show more images
@@ -815,7 +871,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                                   height: 200,
                                                   child: Center(
                                                     child: Text(
-                                                      '+${(json.decode(media) as List<dynamic>).length - 3}',
+                                                      '+${(json.decode(media) as List<dynamic>).length - 2}',
                                                       style: TextStyle(
                                                         color: Colors.white,
                                                         fontSize: 24,
@@ -838,10 +894,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                       ),
 
                                   ],
-                                  SizedBox(height: 8),
-                                  Text(
-                                    '${driverReports[reversedIndex]['message'] ?? ''}',
-                                  ),
                                 ],
                               ),
                             ),
@@ -995,7 +1047,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.fromLTRB(5, 5, 0, 0),
-                                          child: Text(_adminReports[index]['created_at']),
+                                          child: Text(_adminReports[index]['created_at'],style: TextStyle(fontSize: 11,color: Colors.grey),
                                         ),
                                       ],
                                     ),

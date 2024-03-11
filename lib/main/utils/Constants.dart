@@ -12,6 +12,7 @@ final headers = {
   'Content-Type': 'application/json', // Set the content-type to JSON
 };
 const mediaUrl = "$DOMAIN_URL/public/";
+const driverMediaURL = "$DOMAIN_URL/public/media/";
 const googleMapAPIKey = 'ADD_YOUR_GOOGLE_MAP_KEY';
 
 const mOneSignalAppId = 'ADD_YOUR_ONE_SIGNAL_APP_ID';
