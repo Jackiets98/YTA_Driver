@@ -265,16 +265,28 @@ class MapFragmentState extends State<MapFragment> {
                         statuses: Row(
                           children: [
                             Text('Status: '),
-                            Text(
-                              '${device['status']}',
+                            if(device['status'] == '行驶')Text(
+                              'Moving',
                               style: TextStyle(
-                                color: device['status'] == '行驶' &&
-                                    device['engine'] == 'ON'
-                                    ? Colors.green
-                                    : device['status'] == '静止' &&
-                                    device['engine'] == 'ON'
-                                    ? Colors.blue
-                                    : Colors.red,
+                                  color: Colors.green
+                              ),
+                            ),
+                            if(device['status'] == '静止' && device['engine'] == 'ON')Text(
+                              'Idle',
+                              style: TextStyle(
+                                  color: Colors.blue
+                              ),
+                            ),
+                            if(device['status'] == '静止' && device['engine'] == 'OFF')Text(
+                              'Stopped',
+                              style: TextStyle(
+                                color: Colors.red,
+                              ),
+                            ),
+                            if(device['status'] == '离线' && device['engine'] == 'OFF')Text(
+                              'Offline',
+                              style: TextStyle(
+                                color: Colors.grey,
                               ),
                             ),
                           ],
@@ -381,7 +393,7 @@ class MapFragmentState extends State<MapFragment> {
                             fetchDataAndUpdateMarkers();
                           });
                         },
-                        child: Text('All - $totalVehicle', style: TextStyle(color: selectedContent == 'all' || selectedContent == ' ' ? Colors.white : Colors.black),),
+                        child: Text('All - $totalVehicle', style: TextStyle(fontSize: 11,color: selectedContent == 'all' || selectedContent == ' ' ? Colors.white : Colors.black),),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: selectedContent == 'all' || selectedContent == ' ' ? Colors.amber : Colors.white,
                           elevation: 0,
@@ -404,7 +416,7 @@ class MapFragmentState extends State<MapFragment> {
                               fetchDataAndUpdateMarkers();
                             });
                           },
-                          child: Text('Travel - $travelVehicle', style: TextStyle(color: selectedContent == 'travel' ? Colors.white : Colors.black),),
+                          child: Text('Travel - $travelVehicle', style: TextStyle(fontSize: 11, color: selectedContent == 'travel' ? Colors.white : Colors.black),),
                           style:ElevatedButton.styleFrom(backgroundColor: selectedContent == 'travel' ? Colors.green : Colors.white, elevation: 0,shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(0.0), // Adjust as needed
@@ -425,7 +437,7 @@ class MapFragmentState extends State<MapFragment> {
                               fetchDataAndUpdateMarkers();
                             });
                           },
-                          child: Text('Idle - $idleVehicle', style: TextStyle(color: selectedContent == 'idle' ? Colors.white : Colors.black),),
+                          child: Text('Idle - $idleVehicle', style: TextStyle(fontSize: 11, color: selectedContent == 'idle' ? Colors.white : Colors.black),),
                           style:ElevatedButton.styleFrom(backgroundColor: selectedContent == 'idle' ? Colors.blue : Colors.white, elevation: 0, shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(0.0), // Adjust as needed
@@ -446,7 +458,7 @@ class MapFragmentState extends State<MapFragment> {
                               fetchDataAndUpdateMarkers();
                             });
                           },
-                          child: Text('Stop - $stopVehicle', style: TextStyle(color: selectedContent == 'stop' ? Colors.white : Colors.black),),
+                          child: Text('Stop - $stopVehicle', style: TextStyle(fontSize: 11, color: selectedContent == 'stop' ? Colors.white : Colors.black),),
                           style:ElevatedButton.styleFrom(backgroundColor: selectedContent == 'stop' ? Colors.red : Colors.white, elevation: 0, shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(0.0), // Adjust as needed

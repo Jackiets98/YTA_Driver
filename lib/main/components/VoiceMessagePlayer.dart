@@ -20,20 +20,10 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
+    _audioPlayer.setSourceUrl(widget.audioUri);
     _audioPlayer.onDurationChanged.listen((duration) {
       setState(() {
         _duration = duration;
-      });
-    });
-    _audioPlayer.onPositionChanged.listen((position) {
-      setState(() {
-        _position = position;
-      });
-    });
-    _audioPlayer.onPlayerComplete.listen((event) {
-      setState(() {
-        _isPlaying = false;
-        _position = Duration();
       });
     });
   }
