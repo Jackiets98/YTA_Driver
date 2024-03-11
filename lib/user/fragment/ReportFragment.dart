@@ -905,7 +905,14 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                               (json.decode(media) as List<dynamic>).length > 2
                                                   ? GestureDetector(
                                                 onTap: () {
-                                                  // Handle tapping on the + to show more images
+                                                  String imageUrl = driverMediaURL + driverReports[reversedIndex]['media'];
+                                                  _showImageDialog(
+                                                    context,
+                                                    (jsonDecode(driverReports[reversedIndex]['media']) as List)
+                                                        .map<String>((media) => driverMediaURL + media)
+                                                        .toList(),
+                                                    imageUrl,
+                                                  );
                                                 },
                                                 child: Container(
                                                   color: Colors.black54,
