@@ -1168,8 +1168,10 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.fromLTRB(5, 5, 0, 0),
-                                          child: Text(_adminReports[index]['created_at'],style: TextStyle(fontSize: 11,color: Colors.grey),
-                                        ),
+                                          child: Text(
+                                            DateFormat('dd-MM-yyyy hh:mm:ss a').format(DateTime.parse(_adminReports[index]['created_at'])),
+                                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                                          ),
                                         )],
                                     ),
                                   ),
