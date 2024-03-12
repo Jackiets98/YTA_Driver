@@ -10,12 +10,15 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:social_media_recorder/audio_encoder_type.dart';
+import 'package:video_player/video_player.dart';
 import 'package:yes_tracker/main/components/VoiceMessagePlayer.dart';
 import '../../main/utils/Constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:social_media_recorder/screen/social_media_recorder.dart';
 
+import '../components/VideoPlayerScreen.dart';
+import '../components/VideoPlayerWidget.dart';
 import 'image_preview_page.dart';
 
 String? userID;
@@ -68,8 +71,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     _elapsedSeconds = 0;
   }
 
-
-
   Future initRecorder() async{
     final status = await Permission.microphone.request();
 
@@ -93,7 +94,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
 
     await _recorder.startRecorder(toFile: _recordFilePath);
   }
-
 
   Future stop() async{
     if (!isRecorderReady) return;
@@ -124,7 +124,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
 
     print('Recording canceled');
   }
-
 
   Future<void> play() async {
     print('Play function called');
@@ -231,15 +230,15 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     }
   }
 
-  void _sendMessageWithMedia(List<XFile> imageFiles) async {
+  void _sendMessageWithMedia(List<XFile> mediaFiles) async {
     final String message = _messageController.text;
     final url = Uri.parse(mBaseUrl + 'driverMessageMedia');
     final request = http.MultipartRequest('POST', url);
 
-    // Attach the image files
-    for (var imageFile in imageFiles) {
+    // Attach the media files
+    for (var mediaFile in mediaFiles) {
       request.files.add(
-        await http.MultipartFile.fromPath('media[]', imageFile.path),
+        await http.MultipartFile.fromPath('media[]', mediaFile.path),
       );
     }
 
@@ -260,11 +259,11 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
 
         // Extract the message and uploaded images from the response
         String message = responseData['message'];
-        List<dynamic> uploadedImages = responseData['images'];
+        List<dynamic> uploadedMedia = responseData['media'];
 
         // Display the message (optional)
         print(message);
-        print(uploadedImages);
+        print(uploadedMedia);
 
         // Clear the message input field
         _messageController.clear();
@@ -285,9 +284,9 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
 
 
 
+
   void _selectImageFromGallery() async {
-    List<XFile>? pickedFiles = await ImagePicker().pickMultiImage(
-      imageQuality: 80,
+    List<XFile>? pickedFiles = await ImagePicker().pickMultipleMedia(
       maxWidth: 800,
       maxHeight: 600,
     );
@@ -304,7 +303,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
               children: [
                 SizedBox(height: 20),
                 Text(
-                  'Selected Images',
+                  'Selected Media',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -317,15 +316,31 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                     scrollDirection: Axis.horizontal,
                     itemCount: pickedFiles.length,
                     itemBuilder: (context, index) {
-                      return Padding(
-                        padding: EdgeInsets.only(right: 8),
-                        child: Image.file(
-                          File(pickedFiles[index].path),
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.cover,
-                        ),
-                      );
+                      XFile file = pickedFiles[index];
+                      if (file.path.toLowerCase().endsWith('.mp4')) {
+                        return Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                              ),
+                              child: VideoPlayerWidget(file.path),
+                            ),
+                          ),
+                        );
+                      } else {
+                        return Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: Image.file(
+                            File(file.path),
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                      }
                     },
                   ),
                 ),
@@ -352,57 +367,124 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
         },
       );
     }
+
   }
 
-  void _takePictureOnSpot() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.camera);
+  void _takeMediaOnSpot() async {
+    final ImagePicker _picker = ImagePicker();
 
-    if (pickedFile != null) {
-      showModalBottomSheet(
-        context: context,
-        builder: (BuildContext context) {
-          return Container(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: 20),
-                Text(
-                  'Captured Image',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+    // Prompt the user to choose between image or video
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select An Option',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context); // Close the modal bottom sheet
+                      final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+                      if (pickedFile != null) {
+                        _handleMediaPicked(pickedFile, isImage: true);
+                      }
+                    },
+                    icon: Icon(Icons.image),
+                    label: Text('Select Image'),
                   ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context); // Close the modal bottom sheet
+                      final pickedVideo = await _picker.pickVideo(source: ImageSource.camera, maxDuration: Duration(seconds: 5));
+                      if (pickedVideo != null) {
+                        _handleMediaPicked(pickedVideo, isImage: false);
+                      }
+                    },
+                    icon: Icon(Icons.videocam),
+                    label: Text('Record Video'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _handleMediaPicked(XFile file, {required bool isImage}) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 20),
+              Text(
+                isImage ? 'Captured Image' : 'Captured Video',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
-                SizedBox(height: 16),
-                Image.file(
-                  File(pickedFile.path),
-                  width: double.infinity,
-                  height: 200,
-                  fit: BoxFit.cover,
-                ),
-                SizedBox(height: 20),
-                TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: 'Type a message',
-                    border: OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(Icons.send),
-                      onPressed: () {
-                        _sendMessageWithMedia([pickedFile]);
-                      },
+              ),
+              SizedBox(height: 16),
+              // Display the captured image or video
+              isImage
+                  ? Image.file(
+                File(file.path),
+                width: double.infinity,
+                height: 200,
+                fit: BoxFit.cover,
+              )
+                  : Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black,
                     ),
+                    child: VideoPlayerWidget(file.path),
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      );
-    }
+              ),
+              SizedBox(height: 20),
+              TextField(
+                controller: _messageController,
+                decoration: InputDecoration(
+                  hintText: 'Type a message',
+                  border: OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.send),
+                    onPressed: () {
+                      _sendMessageWithMedia([file]);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
+
 
 
   void _showAttachmentOptions() {
@@ -455,7 +537,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                   GestureDetector(
                     onTap: () {
                       Navigator.pop(context); // Close the modal bottom sheet
-                      _takePictureOnSpot(); // Open camera to take a photo
+                      _takeMediaOnSpot(); // Open camera to take a photo
                     },
                     child: Container(
                       decoration: BoxDecoration(
@@ -478,10 +560,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       },
     );
   }
-
-
-
-
 
   void _saveRecordingToBackend(String audioFilePath) async {
     final url = Uri.parse(mBaseUrl + 'driverMessageRecording');
@@ -520,7 +598,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
       // Handle exceptions
     }
   }
-
 
   void _showImageDialog(BuildContext context, List<String> images, String imageUrl) {
     int initialPageIndex = images.indexOf(imageUrl);
@@ -584,52 +661,6 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
         );
       },
     );
-  }
-
-  Future<void> _uploadMedia() async {
-    if (_selectedMedia == null) {
-      // Show a toast if no media is attached
-      Fluttertoast.showToast(
-        msg: "Please include a media",
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-      return;
-    }
-
-    final url = Uri.parse(mBaseUrl + 'driverMessageMedia');
-    final request = http.MultipartRequest('POST', url);
-
-    // Attach the image file
-    if (_selectedMedia != null) {
-      request.files.add(
-        await http.MultipartFile.fromPath('media', _selectedMedia!.path),
-      );
-    }
-
-    // Add other form data
-    request.fields['message'] = _messageController.text;
-    request.fields['userId'] = userID ?? '';
-
-    try {
-      final response = await request.send();
-
-      if (response.statusCode == 200) {
-        // Successfully uploaded
-        print('Media uploaded successfully');
-        // Reset media selection
-        setState(() {
-          _selectedMedia = null;
-        });
-      } else {
-        // Handle the error
-        print('Failed with status code: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error: $e');
-      // Handle exceptions
-    }
   }
 
   Future getID() async {
@@ -818,130 +849,168 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                           final driverImage = driverReports[reversedIndex]['driver_image']; // Get the driver image URL
                           final dynamic media = driverReports[reversedIndex]['media'];
                           String createdAt = DateFormat('dd-MM-yyyy hh:mm:ss a').format(DateTime.parse(driverReports[index]['created_at']));
+                          List<dynamic>? mediaList;
+
+                          if (media != null && !media.endsWith('.aac')) {
+                            mediaList = json.decode(media);
+                          }
                           return Card(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  Stack(
                                     children: [
-                                      if (driverImage != null) // Conditionally show CircleAvatar if driver_image is available
-                                        CircleAvatar(
-                                          backgroundImage: NetworkImage('$DOMAIN_URL/public/drivers/$driverImage'),
-                                        )
-                                      else // Otherwise, show default image
-                                        CircleAvatar(
-                                          backgroundImage: NetworkImage('https://t4.ftcdn.net/jpg/02/27/45/09/360_F_227450952_KQCMShHPOPebUXklULsKsROk5AvN6H1H.jpg'),
+                                      Positioned(
+                                        left: 0,
+                                        top: 0,
+                                        child: Container(
+                                          padding: EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green, // Use the textColor variable here
+                                            border: Border.all(color: Colors.grey),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Icon(Icons.local_shipping, size: 36, color: Colors.white),
                                         ),
-                                      SizedBox(width: 8),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              '${driverReports[reversedIndex]['driver_surname']}',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 50, top: 0, right: 5, bottom: 0),
+                                        child: ListTile(
+                                          title: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text('${driverReports[reversedIndex]['plate_no']}',
+                                                style: TextStyle(fontWeight: FontWeight.bold),),
+                                              FittedBox( // Use FittedBox to fit the child within available space
+                                                child: Text(
+                                                  '${driverReports[reversedIndex]['created_at']}', // Use the createdAt time here
+                                                  style: TextStyle(
+                                                    color: Colors.grey, // Adjust text color as needed
+                                                    fontSize: 12, // Adjust font size as needed
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                            SizedBox(height: 10,),
-                                            Text(
-                                              '$createdAt',
-                                              style: TextStyle(fontSize: 11,color: Colors.grey),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
+                                          subtitle: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              SizedBox(height: 4),
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Text('${driverReports[reversedIndex]['driver_surname']}'),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: 8),
                                   Text(
                                     '${driverReports[reversedIndex]['message'] ?? ''}',
                                   ),
                                   SizedBox(height: 16),
                                   if (media != null) ...[
-                                    if (!media.endsWith('.aac'))
+                                    if (mediaList != null && mediaList.isNotEmpty)
                                       Padding(
                                         padding: const EdgeInsets.all(8.0),
                                         child: GridView.count(
                                           physics: NeverScrollableScrollPhysics(),
                                           crossAxisCount: 3,
                                           shrinkWrap: true,
-                                          children: (json.decode(media) as List<dynamic>).take(2).map<Widget>((media) {
-                                            String imageUrl = driverMediaURL + media;
-                                            return Padding(
-                                              padding: const EdgeInsets.all(2.0),
-                                              child: GestureDetector(
+                                          children: mediaList.take(2).map<Widget>((media) {
+                                            if (media is String && media.endsWith('.jpg')) {
+                                              // Display image
+                                              String imageUrl = driverMediaURL + media;
+                                              return Padding(
+                                                padding: const EdgeInsets.all(2.0),
+                                                child: GestureDetector(
+                                                  onTap: () {
+                                                    _showImageDialog(context, mediaList!.map<String>((media) => driverMediaURL + media).toList(), imageUrl);
+                                                  },
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                        color: Colors.black, // Border color
+                                                        width: 0.2, // Border width
+                                                      ),
+                                                    ),
+                                                    child: Image.network(
+                                                      imageUrl,
+                                                      width: 200,
+                                                      height: 200,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            } else if (media is String && media.endsWith('.mp4')) {
+                                              // Play video
+                                              return GestureDetector(
                                                 onTap: () {
-                                                  _showImageDialog(
+                                                  // Play video
+                                                  Navigator.push(
                                                     context,
-                                                    (jsonDecode(driverReports[reversedIndex]['media']) as List)
-                                                        .map<String>((media) => driverMediaURL + media)
-                                                        .toList(),
-                                                    imageUrl,
+                                                    MaterialPageRoute(
+                                                      builder: (context) => VideoPlayerScreen(videoUrl: driverMediaURL + media),
+                                                    ),
                                                   );
                                                 },
                                                 child: Container(
-                                                  decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                      color: Colors.black, // Border color
-                                                      width: 0.2, // Border width
+                                                  width: 200,
+                                                  height: 200,
+                                                  color: Colors.black, // Placeholder color for video thumbnail
+                                                  child: Center(
+                                                    child: Icon(
+                                                      Icons.play_circle_fill,
+                                                      size: 50,
+                                                      color: Colors.white,
                                                     ),
                                                   ),
-                                                  child: Image.network(
-                                                    imageUrl,
-                                                    width: 200,
-                                                    height: 200,
-                                                    fit: BoxFit.cover,
+                                                ),
+                                              );
+                                            } else {
+                                              // Handle other media types or unknown types
+                                              return Container(); // Return empty container or handle accordingly
+                                            }
+                                          }).toList()..add(
+                                            // Show +X if more than 3 media items
+                                            mediaList.length > 2
+                                                ? GestureDetector(
+                                              onTap: () {
+                                                // Handle tap
+                                              },
+                                              child: Container(
+                                                color: Colors.black54,
+                                                width: 200,
+                                                height: 200,
+                                                child: Center(
+                                                  child: Text(
+                                                    '+${mediaList.length - 2}',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 24,
+                                                    ),
                                                   ),
                                                 ),
                                               ),
-                                            );
-                                          }).toList()
-                                            ..add(
-                                              // Show +X if more than 3 images
-                                              (json.decode(media) as List<dynamic>).length > 2
-                                                  ? GestureDetector(
-                                                onTap: () {
-                                                  String imageUrl = driverMediaURL + driverReports[reversedIndex]['media'];
-                                                  _showImageDialog(
-                                                    context,
-                                                    (jsonDecode(driverReports[reversedIndex]['media']) as List)
-                                                        .map<String>((media) => driverMediaURL + media)
-                                                        .toList(),
-                                                    imageUrl,
-                                                  );
-                                                },
-                                                child: Container(
-                                                  color: Colors.black54,
-                                                  width: 200,
-                                                  height: 200,
-                                                  child: Center(
-                                                    child: Text(
-                                                      '+${(json.decode(media) as List<dynamic>).length - 2}',
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 24,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              )
-                                                  : SizedBox(),
-                                            ),
+                                            )
+                                                : SizedBox(),
+                                          ),
                                         ),
                                       ),
                                     if (media.endsWith('.aac'))
-                                      SizedBox(
-                                        height: 50, // Provide a height constraint
-                                        width: 200, // Provide a width constraint
-                                        child: VoiceMessagePlayer(
+                                    SizedBox(
+                                          height: 50, // Provide a height constraint
+                                          width: 200, // Provide a width constraint
+                                          child: VoiceMessagePlayer(
                                           audioUri: '$DOMAIN_URL/public/audio/$media',
                                         ),
-                                      ),
-
+                                      )
                                   ],
                                 ],
                               ),
