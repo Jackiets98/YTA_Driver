@@ -984,7 +984,14 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                             mediaList.length > 2
                                                 ? GestureDetector(
                                               onTap: () {
-                                                // Handle tap
+                                                String imageUrl = driverMediaURL + driverReports[reversedIndex]['media'];
+                                                _showImageDialog(
+                                                  context,
+                                                  (jsonDecode(driverReports[reversedIndex]['media']) as List)
+                                                      .map<String>((media) => driverMediaURL + media)
+                                                      .toList(),
+                                                  imageUrl,
+                                                );
                                               },
                                               child: Container(
                                                 color: Colors.black54,
@@ -1212,6 +1219,12 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                     physics: AlwaysScrollableScrollPhysics(),
                     itemCount: _adminReports.length,
                     itemBuilder: (context, index) {
+                      final dynamic media = _adminReports[index]['media'];
+                      List<dynamic>? mediaList;
+
+                      if (media != null) {
+                        mediaList = json.decode(media);
+                      }
                       return Card(
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
@@ -1260,71 +1273,99 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                 ),
                               ),
                               // Display media
-                              if (_adminReports[index]['media'] != null)
+                              if (mediaList != null && mediaList.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: GridView.count(
                                     physics: NeverScrollableScrollPhysics(),
                                     crossAxisCount: 3,
                                     shrinkWrap: true,
-                                    children: (jsonDecode(_adminReports[index]['media']) as List)
-                                        .take(2)
-                                        .map<Widget>((media) {
-                                      String imageUrl = mediaUrl + media;
-                                      return Padding(
-                                        padding: const EdgeInsets.all(2.0),
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            _showImageDialog(
-                                              context,
-                                              (jsonDecode(_adminReports[index]['media']) as List)
-                                                  .map<String>((media) => mediaUrl + media)
-                                                  .toList(),
-                                              imageUrl,
-                                            );
-                                          },
-                                          child: Image.network(
-                                            imageUrl,
-                                            width: 200,
-                                            height: 200,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList()
-                                      ..addAll(
-                                        // Show +X if more than 3 images
-                                        ((jsonDecode(_adminReports[index]['media']) as List).length > 2)
-                                            ? [
-                                          GestureDetector(
+                                    children: mediaList.take(2).map<Widget>((media) {
+                                      if (media is String && (media.endsWith('.jpg')||media.endsWith('.png') )) {
+                                        // Display image
+                                        String imageUrl = mediaUrl + media;
+                                        return Padding(
+                                          padding: const EdgeInsets.all(2.0),
+                                          child: GestureDetector(
                                             onTap: () {
-                                              String imageUrl = mediaUrl + _adminReports[index]['media'];
-                                              _showImageDialog(
-                                                context,
-                                                (jsonDecode(_adminReports[index]['media']) as List)
-                                                    .map<String>((media) => mediaUrl + media)
-                                                    .toList(),
-                                                imageUrl,
-                                              );
+                                              _showImageDialog(context, mediaList!.map<String>((media) => mediaUrl + media).toList(), imageUrl);
                                             },
                                             child: Container(
-                                              color: Colors.black54.withOpacity(0.5),
-                                              width: 200,
-                                              height: 200,
-                                              child: Center(
-                                                child: Text(
-                                                  '+${(jsonDecode(_adminReports[index]['media']) as List).length - 2}',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 24,
-                                                  ),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color: Colors.black, // Border color
+                                                  width: 0.2, // Border width
                                                 ),
+                                              ),
+                                              child: Image.network(
+                                                imageUrl,
+                                                width: 200,
+                                                height: 200,
+                                                fit: BoxFit.cover,
                                               ),
                                             ),
                                           ),
-                                        ]
-                                            : [],
-                                      ),
+                                        );
+                                      } else if (media is String && media.endsWith('.mp4')) {
+                                        // Play video
+                                        return GestureDetector(
+                                          onTap: () {
+                                            // Play video
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => VideoPlayerScreen(videoUrl: mediaUrl + media),
+                                              ),
+                                            );
+                                          },
+                                          child: Container(
+                                            width: 200,
+                                            height: 200,
+                                            color: Colors.black, // Placeholder color for video thumbnail
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.play_circle_fill,
+                                                size: 50,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      } else {
+                                        // Handle other media types or unknown types
+                                        return Container(); // Return empty container or handle accordingly
+                                      }
+                                    }).toList()..add(
+                                      // Show +X if more than 3 media items
+                                      mediaList.length > 2
+                                          ? GestureDetector(
+                                        onTap: () {
+                                          String imageUrl = mediaUrl + _adminReports[index]['media'];
+                                          _showImageDialog(
+                                            context,
+                                            (jsonDecode(_adminReports[index]['media']) as List)
+                                                .map<String>((media) => mediaUrl + media)
+                                                .toList(),
+                                            imageUrl,
+                                          );
+                                        },
+                                        child: Container(
+                                          color: Colors.black54,
+                                          width: 200,
+                                          height: 200,
+                                          child: Center(
+                                            child: Text(
+                                              '+${mediaList.length - 2}',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 24,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                          : SizedBox(),
+                                    ),
                                   ),
                                 ),
                             ],
