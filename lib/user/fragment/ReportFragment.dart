@@ -43,6 +43,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
   bool _isTyping = false; // Flag to indicate if the user is typing
   bool _isRecording = false;
   bool _cancelRecording = false;
+  bool _isDelivering = true;
   String _cancelText = "";
   double _keyboardPadding = 50.0; // Initial padding value
   bool isRecorderReady = false;
@@ -672,12 +673,13 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
 
   Future<void> fetchDriverReports({int page = 1}) async {
     try {
-      final response = await http.get(Uri.parse(mBaseUrl + 'getDriverReports?page=$page')); // Replace 'your_backend_url_here' with your actual backend URL
+      final response = await http.get(Uri.parse(mBaseUrl + 'getDriverReports/$userID?page=$page')); // Replace 'your_backend_url_here' with your actual backend URL
 
       if (response.statusCode == 200) {
         // If the request is successful (status code 200), parse the response body
         final Map<String, dynamic> responseData = json.decode(response.body);
         final List<dynamic> _driverReports = responseData['driverReports']['data'];
+        _isDelivering = responseData['isDelivering'];
 
         setState(() {
           if (page == 1) {
@@ -1020,7 +1022,8 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                       ),
                     ),
                   ),
-                  _isRecording
+                  _isDelivering
+                  ? _isRecording
                       ? Column(
                     children: [
                       Center(
@@ -1175,7 +1178,8 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
 
                       ],
                     ),
-                  ),
+                  )
+                      : Column(),
                 ],
               ),
             ),
