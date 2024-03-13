@@ -409,7 +409,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                   ElevatedButton.icon(
                     onPressed: () async {
                       Navigator.pop(context); // Close the modal bottom sheet
-                      final pickedVideo = await _picker.pickVideo(source: ImageSource.camera, maxDuration: Duration(seconds: 5));
+                      final pickedVideo = await _picker.pickVideo(source: ImageSource.camera, maxDuration: Duration(seconds: 10));
                       if (pickedVideo != null) {
                         _handleMediaPicked(pickedVideo, isImage: false);
                       }

@@ -6,7 +6,7 @@ const mContactPref = 'ADD_CONTACT_PREFERENCE_URL';
 const mCodeCanyonURL = 'ADD_CODE_CANYON_URL';
 
 /// Don't add slash at the end of the url
-const DOMAIN_URL = 'https://staging.yessirgps.com';
+const DOMAIN_URL = 'https://app.yessirgps.com';
 const mBaseUrl = "$DOMAIN_URL/api/";
 final headers = {
   'Content-Type': 'application/json', // Set the content-type to JSON
