@@ -26,6 +26,19 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         _duration = duration;
       });
     });
+
+    _audioPlayer.onPositionChanged.listen((position) {
+      setState(() {
+        _position = position;
+      });
+    });
+
+    _audioPlayer.onPlayerComplete.listen((event) {
+      setState(() {
+        _isPlaying = false;
+        _position = Duration(); // Reset position when audio completes
+      });
+    });
   }
 
   @override
