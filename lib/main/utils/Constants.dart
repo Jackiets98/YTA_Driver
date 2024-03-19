@@ -1,6 +1,6 @@
 const mAppName = 'Yes Sir Driver';
-const mPrivacyPolicy = 'https://staging.yessirgps.com/api/PrivacyPolicy';
-const mTermAndCondition = 'https://staging.yessirgps.com/api/TermsAndCondition';
+const mPrivacyPolicy = 'https://app.yessirgps.com/api/PrivacyPolicy';
+const mTermAndCondition = 'https://app.yessirgps.com/api/TermsAndCondition';
 const mHelpAndSupport = 'ADD_HELP_AND_SUPPORT_URL';
 const mContactPref = 'ADD_CONTACT_PREFERENCE_URL';
 const mCodeCanyonURL = 'ADD_CODE_CANYON_URL';

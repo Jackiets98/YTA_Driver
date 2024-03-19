@@ -43,7 +43,7 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     userID = sharedPreferences.getString('id');
 
-    final url = Uri.parse(mBaseUrl + 'getPassword/' + userID!);
+    final url = Uri.parse(mBaseUrl + 'getDriverPassword/' + userID!);
 
     final response = await http.get(url);
 
@@ -62,7 +62,7 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final bool passwordMatches = await BCrypt.checkpw(oldPassController.text.trim(), hashedPassword!);
     if (passwordMatches) {
       print('same');
-      var url = Uri.parse(mBaseUrl + 'updatePassword/' + userID!);
+      var url = Uri.parse(mBaseUrl + 'updateDriverPassword/' + userID!);
 
       final response = await http.post(
         url,
