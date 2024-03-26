@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:image/image.dart' as IMG;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -50,7 +51,7 @@ class MapFragmentState extends State<MapFragment> {
     var deviceID = sharedPreferences.getString('androidID');
 
     setState(() {
-      isLoading == true;
+      isLoading = true;
     });
 
     // Fetch data based on selected content and update markers
@@ -70,9 +71,9 @@ class MapFragmentState extends State<MapFragment> {
 
       for (var device in allMarkers) {
         if (device['plateNo'].toLowerCase().contains(searchText.toLowerCase())) {
-          final BitmapDescriptor movingCarIcon = await _createMarkerImageFromAsset('green_vehicle.png');
-          final BitmapDescriptor idleCarIcon = await _createMarkerImageFromAsset('blue_vehicle.png');
-          final BitmapDescriptor stopCarIcon = await _createMarkerImageFromAsset('red_vehicle.png');
+          final BitmapDescriptor movingCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/green_vehicle/' + device['plateNo'] + '.png');
+          final BitmapDescriptor idleCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/blue_vehicle/' + device['plateNo'] + '.png');
+          final BitmapDescriptor stopCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/red_vehicle/' + device['plateNo'] + '.png');
           BitmapDescriptor markerIcon;
 
           if (device['status'] == '行驶' && device['engine'] == 'ON') {
@@ -85,6 +86,8 @@ class MapFragmentState extends State<MapFragment> {
             markerIcon = stopCarIcon;
             stopVehicle = stopVehicle;
           }
+
+          print('https://staging.yessirgps.com/public/status/red_vehicle/green_vehicle_' + device['plateNo'] + '.png');
 
           markers.add(
             Marker(
@@ -150,11 +153,39 @@ class MapFragmentState extends State<MapFragment> {
   //   });
   // }
 
-  Future<BitmapDescriptor> _createMarkerImageFromAsset(String assetName) async {
-    final ByteData byteData = await rootBundle.load('assets/$assetName');
-    final Uint8List byteList = byteData.buffer.asUint8List();
-    return BitmapDescriptor.fromBytes(byteList);
+  // Future<BitmapDescriptor> _createMarkerImageFromAsset(String assetName) async {
+  //   final ByteData byteData = await rootBundle.load('assets/$assetName');
+  //   final Uint8List byteList = byteData.buffer.asUint8List();
+  //   return BitmapDescriptor.fromBytes(byteList);
+  // }
+
+  Uint8List? resizeImage(Uint8List data, width, height) {
+    Uint8List? resizedData = data;
+    IMG.Image? img = IMG.decodeImage(data);
+    IMG.Image resized = IMG.copyResize(img!, width: width, height: height);
+    resizedData = Uint8List.fromList(IMG.encodePng(resized));
+    return resizedData;
   }
+  
+
+  Future<BitmapDescriptor> _createMarkerImageFromAsset(String assetUrl) async {
+    // Fetch the asset from the URL
+    final http.Response response = await http.get(Uri.parse(assetUrl));
+
+    // Check if the request was successful
+    if (response.statusCode == 200) {
+      // Convert the response body (asset bytes) to Uint8List
+      final Uint8List byteList = response.bodyBytes;
+
+      // Create and return the BitmapDescriptor
+      Uint8List? smallimg = resizeImage(byteList, 200, 200);
+      return BitmapDescriptor.fromBytes(smallimg!);
+    } else {
+      // Handle error if the request fails
+      throw Exception('Failed to load marker image from URL: $assetUrl');
+    }
+  }
+
 
   Future<void> fetchDataAndUpdateMarkers() async {
     try {
@@ -202,12 +233,9 @@ class MapFragmentState extends State<MapFragment> {
         // Add markers based on filteredList
         for (var device in filteredList) {
           // Load icon images for each marker type
-          final BitmapDescriptor movingCarIcon = await _createMarkerImageFromAsset(
-              'green_vehicle.png');
-          final BitmapDescriptor idleCarIcon = await _createMarkerImageFromAsset(
-              'blue_vehicle.png');
-          final BitmapDescriptor stopCarIcon = await _createMarkerImageFromAsset(
-              'red_vehicle.png');
+          final BitmapDescriptor movingCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/green_vehicle/' + device['plateNo'] + '.png');
+          final BitmapDescriptor idleCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/blue_vehicle/' + device['plateNo'] + '.png');
+          final BitmapDescriptor stopCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/red_vehicle/' + device['plateNo'] + '.png');
           BitmapDescriptor markerIcon;
 
           // Determine which icon to use based on the device status or type
@@ -336,9 +364,11 @@ class MapFragmentState extends State<MapFragment> {
     // _timer.cancel();
   }
 
+
+
   @override
   Widget build(BuildContext context) {
-    return isLoading? CircularProgressIndicator():RefreshIndicator(
+    return isLoading? Center(child: CircularProgressIndicator()):RefreshIndicator(
       onRefresh: () async {
         await init();
       },

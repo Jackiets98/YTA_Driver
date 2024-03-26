@@ -88,6 +88,7 @@ dependencies:
   firebase_core: ^2.21.0
   flutter_local_notifications: ^16.1.0
   chewie: ^1.7.5
+  image: ^4.1.7
 
 dev_dependencies:
   flutter_test:
