@@ -310,7 +310,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
         ),
       ),
     ):Scaffold(
-      appBar: AppBar(title: Text(language.editProfile)),
+      appBar: AppBar(title: Text(language.editProfile, style: TextStyle(color: Colors.white),)),
       body: BodyCornerWidget(
         child: Stack(
           children: [

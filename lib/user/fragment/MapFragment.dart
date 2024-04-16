@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
-import 'package:image/image.dart' as IMG;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_supercluster/flutter_map_supercluster.dart';
 import 'package:http/http.dart' as http;
-import '../../main/utils/Constants.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:nb_utils/nb_utils.dart';
+
+import '../../main/utils/Constants.dart';
 
 
 class MapFragment extends StatefulWidget {
@@ -20,35 +21,30 @@ class MapFragment extends StatefulWidget {
 
 class MapFragmentState extends State<MapFragment> {
   String selectedContent = "all";
-  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
   List<Marker> markers = [];
-  late Timer _timer;
+  MapController _mapController = MapController();
   TextEditingController searchController = TextEditingController();
   int totalVehicle = 0;
   int travelVehicle = 0;
   int idleVehicle = 0;
   int stopVehicle = 0;
   bool isLoading  = false;
+  late final SuperclusterMutableController _superclusterController;
 
 
-  static const CameraPosition _kGooglePlex = CameraPosition(
-    target: LatLng(	5.285153, 100.456238),
-    zoom: 8.4746,
-  );
+  static final _initialCenter = LatLng(5.2632, 100.4846);
 
   @override
   void initState() {
     super.initState();
     init();
+    _superclusterController = SuperclusterMutableController();
     // Start the timer when the widget is initialized
     // _startTimer();
   }
 
   Future<void> init() async {
     final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-
-    var obtainedID = sharedPreferences.getString('id');
-    var deviceID = sharedPreferences.getString('androidID');
 
     setState(() {
       isLoading = true;
@@ -58,134 +54,57 @@ class MapFragmentState extends State<MapFragment> {
     fetchDataAndUpdateMarkers();
   }
 
-  void searchVehicle(String searchText) async {
-    // Clear previous markers
-    markers.clear();
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    _superclusterController.dispose();
+  }
 
-
-    var response = await http.get(Uri.parse(mBaseUrl + 'getDeviceList'));
-
-    if (response.statusCode == 200) {
-      List<dynamic> allMarkers = json.decode(response.body);
-      bool markerFound = false;
-
-      for (var device in allMarkers) {
-        if (device['plateNo'].toLowerCase().contains(searchText.toLowerCase())) {
-          final BitmapDescriptor movingCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/green_vehicle/' + device['plateNo'] + '.png');
-          final BitmapDescriptor idleCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/blue_vehicle/' + device['plateNo'] + '.png');
-          final BitmapDescriptor stopCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/red_vehicle/' + device['plateNo'] + '.png');
-          BitmapDescriptor markerIcon;
-
-          if (device['status'] == '行驶' && device['engine'] == 'ON') {
-            markerIcon = movingCarIcon;
-            travelVehicle = travelVehicle;
-          } else if (device['status'] == '静止' && device['engine'] == 'ON') {
-            markerIcon = idleCarIcon;
-            idleVehicle = idleVehicle;
-          } else {
-            markerIcon = stopCarIcon;
-            stopVehicle = stopVehicle;
-          }
-
-          print('https://staging.yessirgps.com/public/status/red_vehicle/green_vehicle_' + device['plateNo'] + '.png');
-
-          markers.add(
-            Marker(
-              markerId: MarkerId('${device['imei']}'),
-              position: LatLng(double.parse(device['lat']), double.parse(device['lng'])),
-              icon: markerIcon,
-              rotation: device['course'].toDouble(),
-              infoWindow: InfoWindow(
-                title: '${device['plateNo']}',
-                snippet: 'Please Click Here For More Details',
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return CustomInfoWindow(
-                        title: '${device['plateNo']}',
-                        speed: Text('Speed: ${device['speed']}km/h'),
-                        course: Text('Course: ${device['course']}'),
-                        battery: Text('Battery: ${device['battery']}V'),
-                        statuses: Row(
-                          children: [
-                            Text('Status: '),
-                            Text(
-                              '${device['status']}',
-                              style: TextStyle(
-                                color: device['status'] == '行驶' && device['engine'] == 'ON' ? Colors.green :
-                                device['status'] == '静止' && device['engine'] == 'ON' ? Colors.blue :
-                                Colors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-                        status: device['status'],
-                        engine: device['engine'],
-                      );
-                    },
-                  );
-                },
+  void showDeviceDetails(BuildContext context, Map<String, dynamic> device) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return CustomInfoWindow(
+          title: '${device['plateNo']}',
+          speed: Text('Speed: ${device['speed']}km/h'),
+          course: Text('Course: ${device['course']}'),
+          battery: Text('Battery: ${device['battery']}V'),
+          statuses: Row(
+            children: [
+              Text('Status: '),
+              if(device['status'] == '行驶') Text(
+                'Moving',
+                style: TextStyle(
+                  color: Colors.green,
+                ),
               ),
-            ),
-          );
-
-          // Move the camera to the position of the first matching marker
-          if (!markerFound) {
-            markerFound = true;
-            final GoogleMapController controller = await _controller.future;
-            controller.animateCamera(CameraUpdate.newLatLngZoom(LatLng(double.parse(device['lat']), double.parse(device['lng'])), 14.0));
-          }
-        }
-      }
-
-      // Update markers on the map
-      setState(() {});
-    }
+              if(device['status'] == '静止' && device['engine'] == 'ON') Text(
+                'Idle',
+                style: TextStyle(
+                  color: Colors.blue,
+                ),
+              ),
+              if(device['status'] == '静止' && device['engine'] == 'OFF') Text(
+                'Stopped',
+                style: TextStyle(
+                  color: Colors.red,
+                ),
+              ),
+              if(device['status'] == '离线' && device['engine'] == 'OFF') Text(
+                'Offline',
+                style: TextStyle(
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          status: device['status'],
+          engine: device['engine'],
+        );
+      },
+    );
   }
-
-
-  // void _startTimer() {
-  //   // Initialize the timer to call the fetchDataAndUpdateMarkers function every 10 seconds
-  //   _timer = Timer.periodic(Duration(seconds: 30), (Timer timer) {
-  //     // Call the fetchDataAndUpdateMarkers function
-  //     fetchDataAndUpdateMarkers();
-  //   });
-  // }
-
-  // Future<BitmapDescriptor> _createMarkerImageFromAsset(String assetName) async {
-  //   final ByteData byteData = await rootBundle.load('assets/$assetName');
-  //   final Uint8List byteList = byteData.buffer.asUint8List();
-  //   return BitmapDescriptor.fromBytes(byteList);
-  // }
-
-  Uint8List? resizeImage(Uint8List data, width, height) {
-    Uint8List? resizedData = data;
-    IMG.Image? img = IMG.decodeImage(data);
-    IMG.Image resized = IMG.copyResize(img!, width: width, height: height);
-    resizedData = Uint8List.fromList(IMG.encodePng(resized));
-    return resizedData;
-  }
-  
-
-  Future<BitmapDescriptor> _createMarkerImageFromAsset(String assetUrl) async {
-    // Fetch the asset from the URL
-    final http.Response response = await http.get(Uri.parse(assetUrl));
-
-    // Check if the request was successful
-    if (response.statusCode == 200) {
-      // Convert the response body (asset bytes) to Uint8List
-      final Uint8List byteList = response.bodyBytes;
-
-      // Create and return the BitmapDescriptor
-      Uint8List? smallimg = resizeImage(byteList, 200, 200);
-      return BitmapDescriptor.fromBytes(smallimg!);
-    } else {
-      // Handle error if the request fails
-      throw Exception('Failed to load marker image from URL: $assetUrl');
-    }
-  }
-
 
   Future<void> fetchDataAndUpdateMarkers() async {
     try {
@@ -209,6 +128,7 @@ class MapFragmentState extends State<MapFragment> {
           filteredList = deviceList.where((device) => device['status'] != '行驶' || device['engine'] != 'ON').toList();
         }
 
+        print(filteredList);
         // Set randomIndex based on the length of the filtered list
         int randomIndex = Random().nextInt(filteredList.length);
 
@@ -230,101 +150,59 @@ class MapFragmentState extends State<MapFragment> {
           stopVehicle = 0; // Reset stop vehicle count
         }
 
+
         // Add markers based on filteredList
         for (var device in filteredList) {
           // Load icon images for each marker type
-          final BitmapDescriptor movingCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/green_vehicle/' + device['plateNo'] + '.png');
-          final BitmapDescriptor idleCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/blue_vehicle/' + device['plateNo'] + '.png');
-          final BitmapDescriptor stopCarIcon = await _createMarkerImageFromAsset('https://staging.yessirgps.com/public/status/red_vehicle/' + device['plateNo'] + '.png');
-          BitmapDescriptor markerIcon;
+          Image markerIcon;
 
           // Determine which icon to use based on the device status or type
           if (selectedContent == 'all') {
             // Add all markers regardless of status
             if (device['status'] == '行驶' && device['engine'] == 'ON') {
-              markerIcon = movingCarIcon;
+              markerIcon = await Image.network(mediaUrl + 'status/green_vehicle/' + device['plateNo'] + '.png');
               travelVehicle++;
             } else if (device['status'] == '静止' && device['engine'] == 'ON') {
-              markerIcon = idleCarIcon;
+              markerIcon = await Image.network(mediaUrl + 'status/blue_vehicle/' + device['plateNo'] + '.png');
               idleVehicle++;
             } else {
-              markerIcon = stopCarIcon;
+              markerIcon = await Image.network(mediaUrl + 'status/red_vehicle/' + device['plateNo'] + '.png');
               stopVehicle++;
             }
           } else if (selectedContent == 'travel') {
-            markerIcon = movingCarIcon;
+            markerIcon = await Image.network(mediaUrl + 'status/green_vehicle/' + device['plateNo'] + '.png');
             travelVehicle++;
           } else if (selectedContent == 'idle' &&
               device['status'] == '静止' && device['engine'] == 'ON') {
-            markerIcon = idleCarIcon;
+            markerIcon = await Image.network(mediaUrl + 'status/blue_vehicle/' + device['plateNo'] + '.png');
             idleVehicle++;
             print(device);
           } else if (selectedContent == 'stop' &&
               device['status'] != '行驶' && device['engine'] == 'OFF') {
-            markerIcon = stopCarIcon;
+            markerIcon = await Image.network(mediaUrl + 'status/red_vehicle/' + device['plateNo'] + '.png');
             stopVehicle++;
-            print(device);
           } else {
             // If not matching any condition, continue to next device
             continue;
           }
 
+          print(selectedContent);
+          print(markerIcon);
+
+          _superclusterController.replaceAll(markers);
           markers.add(
             Marker(
-              markerId: MarkerId('${device['imei']}'),
-              position: LatLng(double.parse(device['lat']),
-                  double.parse(device['lng'])),
-              icon: markerIcon, // Use appropriate marker icon
-              rotation: device['course'].toDouble(),
-              infoWindow: InfoWindow(
-                title: '${device['plateNo']}',
-                snippet: 'Please Click Here For More Details',
-                // Use custom info window widget
-                // Here, we're passing the title and snippet to the custom info window widget
+              builder: (context) => GestureDetector(
                 onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return CustomInfoWindow(
-                        title: '${device['plateNo']}',
-                        speed: Text('Speed: ${device['speed']}km/h'),
-                        course: Text('Course: ${device['course']}'),
-                        battery: Text('Battery: ${device['battery']}V'),
-                        statuses: Row(
-                          children: [
-                            Text('Status: '),
-                            if(device['status'] == '行驶')Text(
-                              'Moving',
-                              style: TextStyle(
-                                  color: Colors.green
-                              ),
-                            ),
-                            if(device['status'] == '静止' && device['engine'] == 'ON')Text(
-                              'Idle',
-                              style: TextStyle(
-                                  color: Colors.blue
-                              ),
-                            ),
-                            if(device['status'] == '静止' && device['engine'] == 'OFF')Text(
-                              'Stopped',
-                              style: TextStyle(
-                                color: Colors.red,
-                              ),
-                            ),
-                            if(device['status'] == '离线' && device['engine'] == 'OFF')Text(
-                              'Offline',
-                              style: TextStyle(
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                        status: device['status'],
-                        engine: device['engine'],
-                      );
-                    },
-                  );
+                  showDeviceDetails(context, device);
                 },
+                child: markerIcon,
+              ),
+              width: 80.0,
+              height: 80.0,
+              point: LatLng(
+                double.parse(device['lat']),
+                double.parse(device['lng']),
               ),
             ),
           );
@@ -335,13 +213,14 @@ class MapFragmentState extends State<MapFragment> {
         });
 
         // Update markers on the map
-        if (_controller.isCompleted) {
-          final GoogleMapController controller = await _controller.future;
-          controller.animateCamera(CameraUpdate.newLatLngZoom(
-              LatLng(double.parse(filteredList[randomIndex]['lat']),
-                  double.parse(filteredList[randomIndex]['lng'])),
-              14.0));
-        }
+        _mapController.move(
+          LatLng(
+            double.parse(filteredList[randomIndex]['lat']),
+            double.parse(filteredList[randomIndex]['lng']),
+          ),
+          14.0,
+        );
+        // Update markers on the map
         setState(() {});
       } else {
         throw Exception('Failed to load data');
@@ -353,18 +232,64 @@ class MapFragmentState extends State<MapFragment> {
   }
 
 
-  @override
-  void setState(fn) {
-    if (mounted) super.setState(fn);
+
+  void searchVehicle(String searchText) async {
+    // Clear previous markers
+    markers.clear();
+
+
+    var response = await http.get(Uri.parse(mBaseUrl + 'getDeviceList'));
+
+    if (response.statusCode == 200) {
+      List<dynamic> allMarkers = json.decode(response.body);
+      bool markerFound = false;
+
+      for (var device in allMarkers) {
+        if (device['plateNo'].toLowerCase().contains(searchText.toLowerCase())) {
+          Image markerIcon;
+
+            final Image movingCarIcon = await Image.network(mediaUrl + 'status/green_vehicle/' + device['plateNo'] + '.png');
+            final Image idleCarIcon = await Image.network(mediaUrl + 'status/blue_vehicle/' + device['plateNo'] + '.png');
+            final Image stopCarIcon = await Image.network(mediaUrl + 'status/red_vehicle/' + device['plateNo'] + '.png');
+
+          if (device['status'] == '行驶' && device['engine'] == 'ON') {
+            markerIcon = movingCarIcon;
+            travelVehicle = travelVehicle;
+          } else if (device['status'] == '静止' && device['engine'] == 'ON') {
+            markerIcon = idleCarIcon;
+            idleVehicle = idleVehicle;
+          } else {
+            markerIcon = stopCarIcon;
+            stopVehicle = stopVehicle;
+          }
+
+          markers.add(
+            Marker(
+              builder: (context) => markerIcon,
+              width: 80.0,
+              height: 80.0,
+              point: LatLng(
+                double.parse(device['lat']),
+                double.parse(device['lng']),
+              ),
+            ),
+          );
+
+          if (!markerFound) {
+            markerFound = true;
+            _mapController.move(
+              LatLng(double.parse(device['lat']), double.parse(device['lng'])),
+              14.0,
+            );
+          }
+
+        }
+      }
+
+      // Update markers on the map
+      setState(() {});
+    }
   }
-
-  @override
-  void dispose() {
-    super.dispose();
-    // _timer.cancel();
-  }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -376,14 +301,40 @@ class MapFragmentState extends State<MapFragment> {
         padding: const EdgeInsets.fromLTRB(0, 0, 0, 50),
         child: Stack(
           children: [
-            GoogleMap(
-              mapType: MapType.normal,
-              initialCameraPosition: _kGooglePlex,
-              onMapCreated: (GoogleMapController controller) {
-                _controller.complete(controller);
-              },
-              markers: Set<Marker>.of(markers),
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                center: _initialCenter,
+                zoom: 14,
+                minZoom: 5,
+                maxZoom: 18
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                ),
+                SuperclusterLayer.mutable(
+                  clusterWidgetSize: Size(40,40),// Replaces MarkerLayer
+                  initialMarkers: markers,
+                  indexBuilder: IndexBuilders.rootIsolate,
+                  controller: _superclusterController,
+                  builder: (context, position, markerCount, extraClusterData) =>
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(50.0),
+                          color: Colors.blue,
+                        ),
+                        child: Center(
+                          child: Text(
+                            markerCount.toString(),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                ),
+              ],
             ),
+
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
@@ -596,3 +547,7 @@ Color getColorFromStatusAndEngine(String status, String engine) {
       return Colors.grey;
   }
 }
+
+
+
+

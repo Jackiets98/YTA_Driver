@@ -55,7 +55,7 @@ class _ThemeScreenState extends State<ThemeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(language.theme)),
+      appBar: AppBar(title: Text(language.theme, style: TextStyle(color: Colors.white))),
       body: BodyCornerWidget(
         child: ListView(
           children: List.generate(

@@ -116,7 +116,7 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(language.changePassword)),
+      appBar: AppBar(title: Text(language.changePassword, style: TextStyle(color: Colors.white))),
       body: Stack(
         children: [
           Form(

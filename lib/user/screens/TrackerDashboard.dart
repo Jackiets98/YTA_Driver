@@ -78,7 +78,7 @@ class TrackerDashboardState extends State<TrackerDashboard> {
       extendBody: true,
       backgroundColor: Colors.grey,
       appBar: AppBar(
-        title: Text('${getTitle()}'),
+        title: Text('${getTitle()}', style: TextStyle(color: Colors.white),),
         actions: [
           Padding(
             padding: const EdgeInsets.all(8.0),
