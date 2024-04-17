@@ -903,9 +903,15 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                               Row(
                                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                 children: [
-                                                  Text('${driverReports[reversedIndex]['driver_name']}'),
+                                                  Flexible(
+                                                    child: Text(
+                                                      '${driverReports[reversedIndex]['driver_name']}',
+                                                      overflow: TextOverflow.visible, // TextOverflow.ellipsis to display ellipsis (...) for overflow
+                                                    ),
+                                                  ),
                                                 ],
                                               ),
+
                                             ],
                                           ),
                                         ),
