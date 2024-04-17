@@ -2,72 +2,79 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_swiper_null_safety/flutter_swiper_null_safety.dart';
 
-class ImagePreviewPage extends StatelessWidget {
-  final XFile imageFile;
+class ImagePreviewPage extends StatefulWidget {
+  final List<XFile> imageFiles;
   final TextEditingController messageController;
-  final void Function(XFile) sendMessage;
+  final void Function(List<XFile>) sendMessage;
 
   const ImagePreviewPage({
-    required this.imageFile,
+    required this.imageFiles,
     required this.messageController,
     required this.sendMessage,
   });
 
   @override
+  _ImagePreviewPageState createState() => _ImagePreviewPageState();
+}
+
+class _ImagePreviewPageState extends State<ImagePreviewPage> {
+  int _currentIndex = 0;
+
+  @override
   Widget build(BuildContext context) {
-    print('Image Path: ${imageFile.path}'); // Print imagePath value
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+        title: Text('Image Preview'),
       ),
+      backgroundColor: Colors.black,
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: Center(
-              child: Image.file(
-                File(imageFile.path),
-                fit: BoxFit.cover,
-              ),
+            child: Swiper(
+              itemCount: widget.imageFiles.length,
+              index: _currentIndex,
+              itemBuilder: (BuildContext context, int index) {
+                return Center(
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    height: MediaQuery.of(context).size.height * 0.6,
+                    child: Image.file(
+                      File(widget.imageFiles[index].path),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                );
+              },
+              onIndexChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              layout: SwiperLayout.DEFAULT,
+              scrollDirection: Axis.horizontal,
+              loop: false, // Disable infinite looping
             ),
           ),
           Container(
-            color: Colors.black,
-            padding: EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(10),
+            color: Colors.grey[200],
             child: Row(
               children: [
                 Expanded(
-                  flex: 5,
                   child: TextField(
-                    controller: messageController,
-                    style: TextStyle(color: Colors.white),
+                    controller: widget.messageController,
                     decoration: InputDecoration(
                       hintText: 'Type your message...',
-                      hintStyle: TextStyle(color: Colors.white),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                        borderSide: BorderSide(color: Colors.white), // Set border side color to white
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                        borderSide: BorderSide(color: Colors.white), // Set border side color to white
-                      ),
                     ),
-                    textAlignVertical: TextAlignVertical.center,
                   ),
                 ),
-                SizedBox(width: 16.0),
                 IconButton(
-                  onPressed: () => sendMessage(imageFile), // <-- Pass XFile to sendMessage
-                  icon: Icon(Icons.send, color: Colors.white),
+                  icon: Icon(Icons.send),
+                  onPressed: () {
+                    widget.sendMessage(widget.imageFiles);
+                  },
                 ),
               ],
             ),

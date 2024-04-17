@@ -671,7 +671,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
     androidID = sharedPreferences.getString('androidID');
   }
 
-  Future<void> fetchDriverReports({int page = 1}) async {
+  Future<void> fetchDriverReports({int page = 0}) async {
     try {
       final response = await http.get(Uri.parse(mBaseUrl + 'getDriverReports/$userID?page=$page')); // Replace 'your_backend_url_here' with your actual backend URL
 
@@ -883,7 +883,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                           title: Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text('${driverReports[reversedIndex]['plate_no']}',
+                                              Text('${driverReports[reversedIndex]['current_vehicle_plate']}',
                                                 style: TextStyle(fontWeight: FontWeight.bold),),
                                               FittedBox( // Use FittedBox to fit the child within available space
                                                 child: Text(
@@ -903,7 +903,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                                               Row(
                                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                 children: [
-                                                  Text('${driverReports[reversedIndex]['driver_surname']}'),
+                                                  Text('${driverReports[reversedIndex]['driver_name']}'),
                                                 ],
                                               ),
                                             ],
@@ -1142,22 +1142,30 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                         Expanded(
                           flex: 5,
                           child: SizedBox(
-                            height: 40.0,
-                            child: TextField(
-                              controller: _messageController,
-                              onChanged: _handleMessageInputChange,
-                              decoration: InputDecoration(
-                                hintText: 'Type your message...',
-                                hintStyle: TextStyle(fontSize: 14.0),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(20.0),
+                            // height: 40.0, // You may want to adjust the height according to your design
+                            child: SingleChildScrollView(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxHeight: 6 * 30.0, // Set the maximum height based on 6 lines with a height of 20.0 per line
                                 ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(Icons.attach_file),
-                                  onPressed: _showAttachmentOptions,
+                                child: TextField(
+                                  controller: _messageController,
+                                  onChanged: _handleMessageInputChange,
+                                  decoration: InputDecoration(
+                                    hintText: 'Type your message...',
+                                    hintStyle: TextStyle(fontSize: 14.0),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(20.0),
+                                    ),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(Icons.attach_file),
+                                      onPressed: _showAttachmentOptions,
+                                    ),
+                                  ),
+                                  textAlignVertical: TextAlignVertical.center,
+                                  maxLines: null, // Set maxLines to null for multi-line support
                                 ),
                               ),
-                              textAlignVertical: TextAlignVertical.center,
                             ),
                           ),
                         ),
@@ -1186,7 +1194,7 @@ class _ReportFragmentState extends State<ReportFragment> with WidgetsBindingObse
                       ],
                     ),
                   )
-                      : Column(),
+                      : Container(),
                 ],
               ),
             ),

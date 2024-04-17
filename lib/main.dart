@@ -102,7 +102,7 @@ class MyAppState extends State<MyApp> {
     print("FCM Token: $token");
 
     // Send the FCM token to the Laravel backend
-    final url = 'https://staging.yessirgps.com/api/register-fcm-token';
+    final url = 'https://app.yessirgps.com/api/register-fcm-token';
 
     try {
       final response = await http.post(

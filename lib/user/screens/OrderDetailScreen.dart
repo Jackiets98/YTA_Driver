@@ -115,7 +115,7 @@ class OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> fetchUserRating() async {
-    final url = Uri.parse('https://staging.yessirgps.com/api/get-rating/${widget.orderId}');
+    final url = Uri.parse('https://app.yessirgps.com/api/get-rating/${widget.orderId}');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
